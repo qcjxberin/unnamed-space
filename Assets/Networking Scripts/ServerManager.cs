@@ -10,8 +10,7 @@ public class ServerManager : MonoBehaviour {
     public string shout;
 
     List<Server> servers = new List<Server>();
-    NATHelper nath;
-
+    
 
 
 
