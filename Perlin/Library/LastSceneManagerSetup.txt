@@ -1,4 +1,0 @@
-sceneSetups:
-- path: Assets/nettest.unity
-  isLoaded: 1
-  isActive: 1
