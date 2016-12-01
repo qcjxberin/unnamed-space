@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class ConnectionInfo : MonoBehaviour {
+public class ConnectionInfo {
 
     public int connectionId;
 
@@ -9,3 +9,4 @@ public class ConnectionInfo : MonoBehaviour {
         connectionId = id;
     }
 }
+
