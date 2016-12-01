@@ -233,16 +233,18 @@ public class LowLevelNetworkManager : MonoBehaviour {
 
         return hashString.PadLeft(32, '0');
     }
-}
 
-class ConnectionInfo {
-    public int connectionId;
-    public string hashGiven;
+    class ConnectionInfo {
+        public int connectionId;
+        public string hashGiven;
 
-    public ConnectionInfo(int id, string hash) {
-        connectionId = id;
-        hashGiven = hash;
+        public ConnectionInfo(int id, string hash) {
+            connectionId = id;
+            hashGiven = hash;
+        }
+
+
     }
-
-    
 }
+
+
