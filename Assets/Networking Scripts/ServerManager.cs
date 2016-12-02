@@ -5,17 +5,11 @@ using UnityEngine.Networking;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 
-public class ServerManager : MonoBehaviour {
+public class ServerManager {
 
     public string shout;
 
     List<Server> servers = new List<Server>();
-    
-
-
-
-    void Start() {
-    }
 
     //Request to create a new server in the conglomeration of servers.
     //Probably originates from a NAT punchthrough. We should check if
@@ -36,10 +30,26 @@ public class ServerManager : MonoBehaviour {
         return true;
     }
 
-    //Always check for new packets.
-    void Update() {
-        Receive();
+    public bool SpawnClient(int listenPort, string connectAddress, int connectPort) {
+        bool isPortAlreadyWatched = false;
+        foreach (Server s in servers) {
+            if (s.isSetup && s.getPort() == listenPort)
+                isPortAlreadyWatched = true;
+        }
+        if (isPortAlreadyWatched) {
+            return false;
+        }
+        Server newServer = new Server();
+        newServer.SetupServer(listenPort);
+        servers.Add(newServer);
+        bool success = newServer.Connect(connectAddress, connectPort);
+        if (success) {
+            Debug.Log("Congratulations, peer connection achieved. Ready to begin.");
+        }
+        return true;
     }
+
+    
 
     //Checks for packets from all servers.
     void Receive() {
@@ -57,7 +67,7 @@ public class ServerManager : MonoBehaviour {
             break;
 
             case NetworkEventType.ConnectEvent:    //2
-            RegisterClient(connectionId, recHostId);
+            RegisterPeer(connectionId, recHostId);
             Debug.Log("Recieved ConnectEvent");
             break;
 
@@ -73,18 +83,18 @@ public class ServerManager : MonoBehaviour {
         }
     }
 
-    void RegisterClient(int connectId, int serverId) {
+    void RegisterPeer(int connectId, int serverId) {
         foreach(Server s in servers) {
             if(s.getSocketId() == serverId) {
-                Debug.Log("Registering new client to serverId " + serverId);
-                bool success = s.AcceptClient(connectId);
+                Debug.Log("Registering new peer to serverId " + serverId);
+                bool success = s.AcceptPeer(connectId);
                 switch (success) {
                     case true:
-                    Debug.Log("Successfully registered new client.");
+                    Debug.Log("Successfully registered new peer.");
                     break;
 
                     case false:
-                    Debug.Log("Server refused new client registration.");
+                    Debug.Log("Server refused new peer registration.");
                     break;
                 }
             }
@@ -107,7 +117,7 @@ public class ServerManager : MonoBehaviour {
     }
 
 
-    public void ShoutAtAllClients() {
+    public void ShoutAtAllPeers() {
         Debug.Log("Shouting at all clients.");
         byte[] shout = new byte[50];
         Stream stream = new MemoryStream(shout);

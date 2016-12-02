@@ -1,11 +1,11 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class ConnectionInfo {
+public class PeerInfo {
 
     public int connectionId;
 
-    public ConnectionInfo(int id) {
+    public PeerInfo(int id) {
         connectionId = id;
     }
 }

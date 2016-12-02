@@ -101,7 +101,7 @@ public class NATHelper : MonoBehaviour
             // If this is not the first time connecting to the facilitor it means the server just received
             // a successful punchthrough and it reconnecting to prepare for more punching. We can start
             // listening immediately.
-            StartCoroutine(waitForIncomingNATPunchThroughOnServer(onHolePunched));
+            //StartCoroutine(waitForIncomingNATPunchThroughOnServer(onHolePunched));
         }
 
         isReady = true;
@@ -191,7 +191,7 @@ public class NATHelper : MonoBehaviour
      * Punch a hole form a client to the server identified by hostGUID
      * Once the hole is punched onHolePunched will be called with the ports to use to connect
      */
-    public void punchThroughToServer(string hostGUIDString, Action<int, int> onHolePunched)
+    public void punchThroughToServer(string hostGUIDString, Action<int, int, string> onHolePunched)
     {
         RakNetGUID hostGUID = new RakNetGUID(ulong.Parse(hostGUIDString));
         natPunchthroughClient.OpenNAT(hostGUID, facilitatorSystemAddress);
@@ -202,7 +202,7 @@ public class NATHelper : MonoBehaviour
      * Wait for a NAT Punchthrough responses from the server. Once a hole is punched
      * RakNet is shutdown so the NetworkManager can connect via UNet
      */
-    IEnumerator waitForResponseFromServer(RakNetGUID hostGUID, Action<int, int> onHolePunched)
+    IEnumerator waitForResponseFromServer(RakNetGUID hostGUID, Action<int, int, string> onHolePunched)
     {
         ushort natListenPort = 0, natConnectPort = 0;
         while (true)
@@ -237,8 +237,8 @@ public class NATHelper : MonoBehaviour
                         rakPeer.Shutdown(0);
 
                         // Hole is punched!
-                        onHolePunched(natListenPort, natConnectPort);
-
+                        onHolePunched(natListenPort, natConnectPort, hostGUID.g.ToString());
+                        StartCoroutine(connectToNATFacilitator());
                         yield break; // Totally done
 
                     default:
@@ -248,6 +248,14 @@ public class NATHelper : MonoBehaviour
             }
             yield return new WaitForEndOfFrame();
         }
+    }
+
+    public void RestartNAT() {
+        Debug.Log("Force Restart NATHelper, please wait");
+        isReady = false;
+        StopAllCoroutines();
+        rakPeer.Shutdown(0);
+        StartCoroutine(connectToNATFacilitator());
     }
     
     void OnApplicationQuit()

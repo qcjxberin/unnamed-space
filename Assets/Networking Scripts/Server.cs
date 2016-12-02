@@ -18,7 +18,7 @@ class Server {
     byte unreliableChannel;
     int socketId;
 
-    List<ConnectionInfo> connections = new List<ConnectionInfo>();
+    List<PeerInfo> peers = new List<PeerInfo>();
 
 	// Use this for initialization
 	public Server() {
@@ -33,7 +33,7 @@ class Server {
     }
 
     public void SetupServer(int listenPort) {
-        Debug.Log("Starting up server at port " + listenPort);
+        Debug.Log("Starting up host at port " + listenPort);
         NetworkTransport.Init();
         ConnectionConfig config = new ConnectionConfig();
 
@@ -45,14 +45,36 @@ class Server {
         socketId = NetworkTransport.AddHost(topology, listenPort);
         isSetup = true;
     }
+
+    public bool Connect(string address, int port) {
+        byte err;
+        int connId;
+        connId = NetworkTransport.Connect(socketId, address, port, 0, out err);
+        NetworkError error = (NetworkError)err;
+        Debug.Log("Server with id connected to peer " + address + ":" + port + " with error code " + error.ToString());
+        if (error.Equals(NetworkError.Ok)) {
+            bool success = AcceptPeer(connId);
+            if (success) {
+                Debug.Log("Successfully registered new connection.");
+                return true;
+            }else {
+                Debug.Log("Server did not register new connection.");
+                return false;
+            }
+        }else {
+            Debug.Log("NetworkTransport.Connect() had an error. Did not connect to peer.");
+            return false;
+        }
+        
+    }
 	
 	
 	public void Update () {
 	}
 
-    public bool AcceptClient(int id) {
+    public bool AcceptPeer(int id) {
         bool isIdUnique = true;
-        foreach(ConnectionInfo ci in connections) {
+        foreach(PeerInfo ci in peers) {
             if(ci.connectionId == id) {
                 isIdUnique = false;
             }
@@ -61,17 +83,17 @@ class Server {
             return false;
         }
 
-        ConnectionInfo newConnection = new ConnectionInfo(id);
-        connections.Add(newConnection);
+        PeerInfo newConnection = new PeerInfo(id);
+        peers.Add(newConnection);
         return true;
     }
 
     public bool BroadcastAll(byte[] packet) {
         bool successflag = true;
         byte error;
-        foreach(ConnectionInfo ci in connections) {
+        foreach(PeerInfo peer in peers) {
             byte err;
-            bool success = NetworkTransport.Send(socketId, ci.connectionId, reliableChannel, packet, packet.Length, out err);
+            bool success = NetworkTransport.Send(socketId, peer.connectionId, reliableChannel, packet, packet.Length, out err);
             if (!success) {
                 successflag = false;
                 error = err;
