@@ -15,7 +15,7 @@
 		_UpDir("Up Direction", Vector) = (0, 1, 0, 0)
 	}
 		SubShader{
-		Tags{ "Queue" = "Background+100" }
+		Tags{ "Queue" = "Background" }
 		LOD 200
 		Cull Front
 		CGPROGRAM
