@@ -2,6 +2,7 @@
 {
 	Properties{
 		_MainTex("", 2D) = "white" {}
+		_Color1("Color", Color) = (0,0,0,0)
 	}
 	SubShader
 	{
@@ -18,6 +19,7 @@
 			uniform sampler2D _CameraDepthTexture;
 			
 			sampler2D _MainTex;
+			half4 _Color1;
 			struct v2f
 			{
 				float4 projPos : TEXCOORD1;
@@ -36,18 +38,25 @@
 			
 			
 
-			fixed4 frag (v2f i) : COLOR
+			half4 frag (v2f i) : COLOR
 			{
-				float depth = Linear01Depth(tex2Dproj(_CameraDepthTexture, i.projPos).r);
 				half4 scene = tex2D(_MainTex, i.uv);
+				float depth = Linear01Depth(tex2Dproj(_CameraDepthTexture, i.projPos).r) - 0.01;
+				//return depth;
+				if (1-depth < 0.02) {
+					return scene;
+				}
+				
+				
 				half4 c;
 				c.r = depth;
 				c.g = depth;
 				c.b = depth;
 				c.a = 1;
 				scene.a = 1;
-				
-				return depth;
+				//return 1 - depth;
+				//return depth;
+				return scene + _Color1*depth;
 			}
 			ENDCG
 		}
