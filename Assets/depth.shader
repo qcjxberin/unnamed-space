@@ -3,6 +3,7 @@
 	Properties{
 		_MainTex("", 2D) = "white" {}
 		_Color1("Color", Color) = (0,0,0,0)
+		_Tex2("Atmo", 2D) = "white" {}
 	}
 	SubShader
 	{
@@ -17,7 +18,7 @@
 
 			#include "UnityCG.cginc"
 			uniform sampler2D _CameraDepthTexture;
-			
+			sampler2D _Tex2;
 			sampler2D _MainTex;
 			half4 _Color1;
 			struct v2f
@@ -40,12 +41,14 @@
 
 			half4 frag (v2f i) : COLOR
 			{
-				half4 scene = tex2D(_MainTex, i.uv);
-				float depth = Linear01Depth(tex2Dproj(_CameraDepthTexture, i.projPos).r) - 0.01;
+				//clip(-1);
+				//half4 scene = tex2D(_MainTex, i.uv);
+				half4 atmo = tex2D(_Tex2, i.uv);
+				return atmo;
+				/*
+				float depth = Linear01Depth(tex2Dproj(_CameraDepthTexture, i.projPos).r);
 				//return depth;
-				if (1-depth < 0.02) {
-					return scene;
-				}
+				
 				
 				
 				half4 c;
@@ -56,7 +59,9 @@
 				scene.a = 1;
 				//return 1 - depth;
 				//return depth;
+				return lerp(scene, _Color1*1, depth);
 				return scene + _Color1*depth;
+				*/
 			}
 			ENDCG
 		}

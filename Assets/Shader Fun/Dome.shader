@@ -33,7 +33,7 @@
 		#pragma target 4.0
 
 		sampler2D _MainTex;
-
+		//uniform sampler2D _CameraDepthTexture;
 		struct Input {
 			float2 uv_MainTex;
 			float3 worldPos;
@@ -53,6 +53,7 @@
 		float4 _UpDir;
 
 		void surf(Input IN, inout SurfaceOutput o) {
+			
 			// Albedo comes from a texture tinted by color
 			
 			float3 localPixel = normalize(IN.worldPos - _WorldSpaceCameraPos);
