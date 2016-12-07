@@ -42,10 +42,10 @@
 			half4 frag (v2f i) : COLOR
 			{
 				//clip(-1);
-				//half4 scene = tex2D(_MainTex, i.uv);
-				half4 atmo = tex2D(_Tex2, i.uv);
-				return atmo;
-				/*
+				half4 scene = tex2D(_MainTex, i.uv);
+				//half4 atmo = tex2D(_Tex2, i.uv);
+				//return atmo;
+				
 				float depth = Linear01Depth(tex2Dproj(_CameraDepthTexture, i.projPos).r);
 				//return depth;
 				
@@ -56,12 +56,12 @@
 				c.g = depth;
 				c.b = depth;
 				c.a = 1;
-				scene.a = 1;
+				//scene.a = 1;
 				//return 1 - depth;
 				//return depth;
-				return lerp(scene, _Color1*1, depth);
+				//return lerp(scene, _Color1*1, depth);
 				return scene + _Color1*depth;
-				*/
+				
 			}
 			ENDCG
 		}

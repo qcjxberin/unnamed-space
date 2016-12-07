@@ -9,7 +9,7 @@ public class AtmosphereFog : MonoBehaviour {
     }
 	// Use this for initialization
 	void OnRenderImage(RenderTexture source, RenderTexture destination) {
-        mat.SetTexture("_Tex2", AtmosphereTexture);
-        Graphics.Blit(AtmosphereTexture, destination, mat);
+       
+        Graphics.Blit(source, destination, mat);
     }
 }
