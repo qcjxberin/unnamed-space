@@ -80,7 +80,7 @@
 			o.Albedo = c;
 
 			// Metallic and smoothness come from slider variables
-			o.Alpha = clamp(a + lightAngle*0.2, 0, 1);
+			o.Alpha = clamp((a + lightAngle*0.2)*clamp(day+1,0,1), 0, 1);
 			//o.Albedo = lerp(_Color1, _Color2, (1 - pow(_Factor, angleFraction * _Factor3)*_Factor2));
 			//o.Albedo = _Color1;
 		}
