@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.Networking;
 
 public class NetworkCoordinator : MonoBehaviour {
     ServerManager sm = new ServerManager();
@@ -13,17 +14,29 @@ public class NetworkCoordinator : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
+        NetworkTransport.Init();
         nath = gameObject.GetComponent<NATHelper>();
-        pigeon = gameObject.AddComponent<CarrierPigeon>();
+        pigeon = gameObject.GetComponent<CarrierPigeon>();
 	}
+
+    void Update() {
+        sm.Receive();
+    }
 	
 	public void CoordinatorHostGame() {
         if(pigeon.ready && nath.isReady) {
             pigeon.HostGame(nath.guid, nath.externalIP);
         }
-            
+        Debug.Log("Beginning to listen for incoming punches.");
+        nath.startListeningForPunchthrough(onHolePunchedServer);
             
     }
+
+    void onHolePunchedServer(int listenPort, string exIP) {
+        Debug.Log("Server receieved hole punch, spawning server on port");
+        sm.SpawnServer(listenPort);
+    }
+
     public void CoordinatorJoinGame() {
         if (pigeon.ready && nath.isReady) {
             pigeon.JoinGame(OnInfoAcquired); //Once the match is successfully joined, OnInfoAcquired is called with the pigeon's data
@@ -31,12 +44,13 @@ public class NetworkCoordinator : MonoBehaviour {
     }
 
     public void OnInfoAcquired(string serverExternalIP, string serverInternalIP, string serverGUID) { //Carrier pigeon has delivered game owner's data. Punch through to game owner.
+        Debug.Log("Acquired match info. Preparing to punch.");
         EnterPunchingMode(); //Reboot NAT system. This may take some time. Punch() will wait for it.
         OutboundPunchContainer pc = new OutboundPunchContainer(serverExternalIP, serverInternalIP, serverGUID, punchCounter); //Record pigeon data for future use.
         punchCounter++;
         outboundPunches.Add(pc);
         StartCoroutine(Punch(serverGUID)); //Punch() will punch to GUID when the NAT system is ready to do so.
-    }
+    }   
 
     void onHolePunchedClient(int listenPort, int connectPort, string serverGUID) {
         Debug.Log("Punched hole to server GUID " + serverGUID + ", about to make connection.");
@@ -48,10 +62,11 @@ public class NetworkCoordinator : MonoBehaviour {
         foreach(OutboundPunchContainer pc in outboundPunches) {
             if(pc.serverGUID == serverGUID) {
                 punchInfo = pc;
+                break;
             }
         }
         if(punchInfo == null) {
-            Debug.Log("Can't find history of this hole being requested");
+            Debug.Log("Can't find history of this hole punch being requested");
             return;
         }
 
@@ -62,7 +77,8 @@ public class NetworkCoordinator : MonoBehaviour {
                 addressToConnectTo = punchInfo.serverInternalIP; //Just stay inside the LAN.
             }
         }
-        sm.SpawnServer(listenPort);
+        //ServerManager.SpawnClient() creates an ordinary node and then connects it to the specified target.
+        sm.SpawnClient(listenPort, addressToConnectTo, connectPort);
 
 
     }
@@ -73,7 +89,8 @@ public class NetworkCoordinator : MonoBehaviour {
         nath.punchThroughToServer(guid, onHolePunchedClient);
     }
     public void EnterPunchingMode() {
-        nath.RestartNAT();
+        Destroy(nath);
+        nath = gameObject.AddComponent<NATHelper>();
     }
 }
 

@@ -17,9 +17,9 @@ public class Daylight : MonoBehaviour {
         if (thislight == null) {
             Awake();
         }
-        thislight.color = Color.Lerp(sunsetColor, daylightColor, Mathf.Pow(Vector3.Dot(transform.forward, Vector3.down), 5f));
+        thislight.color = Color.Lerp(daylightColor, sunsetColor, 1 - Mathf.Pow(Vector3.Dot(transform.forward, Vector3.down), 1f));
         //thislight.intensity = Mathf.Pow(Vector3.Dot(transform.forward, Vector3.down), 0.5f);
-        float i = Mathf.Pow((Vector3.Angle(transform.forward, Vector3.up)/180 - 0.4f) *2, 0.5f);
+        float i = Mathf.Clamp01(Mathf.Pow((Vector3.Angle(transform.forward, Vector3.up)/90)-1, 0.5f) * 1.5f);
         if (float.IsNaN(i)) {
             thislight.intensity = 0;
         }

@@ -2,6 +2,7 @@
 using System.Collections;
 
 public class TerrainSpawner : MonoBehaviour {
+    public Transform sunTransform;
     public Material terrainMaterial;
     public GameObject water;
     Perlin perl;
@@ -29,7 +30,7 @@ public class TerrainSpawner : MonoBehaviour {
         MeshRenderer mr = newTile.AddComponent<MeshRenderer>();
         mr.material = terrainMaterial;
         Debug.Log("making water");
-        Instantiate(water, new Vector3(position.x + 1000, 400, position.z + 1000), Quaternion.identity);
+        //Instantiate(water, new Vector3(position.x + 1000, 400, position.z + 1000), Quaternion.identity);
 	}
 	
 	// Update is called once per frame
@@ -53,7 +54,7 @@ public class TerrainSpawner : MonoBehaviour {
 
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
-                MakeChunkNew(100, new Vector3(i * 2000, 0, j * 2000), i, j);
+                MakeChunkNew(100, new Vector3(i * 2000 - 10000, -1000, j * 2000 - 10000), i, j);
             }
         }
     }
@@ -93,11 +94,13 @@ public class TerrainSpawner : MonoBehaviour {
         Mesh m = tp.Process(perlinData);
         GameObject newTile = new GameObject();
         newTile.transform.position = position;
+        SunDirection sd = newTile.AddComponent<SunDirection>();
+        sd.sunTransform = sunTransform;
         MeshFilter mf = newTile.AddComponent<MeshFilter>();
         mf.mesh = m;
         MeshRenderer mr = newTile.AddComponent<MeshRenderer>();
         mr.material = terrainMaterial;
-        Instantiate(water, new Vector3(position.x + 1000, 1000*1f, position.z + 1000), Quaternion.identity);
+        //Instantiate(water, new Vector3(position.x + 1000, 0, position.z + 1000), Quaternion.identity);
     }
 
     double desert(double x, double y, double z) {

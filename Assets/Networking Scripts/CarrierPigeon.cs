@@ -12,7 +12,7 @@ public class CarrierPigeon : NetworkManager {
     FieldInfo clientIDField;
 
     Action<string, string, string> joinGameCallback;
-
+    
 	// Use this for initialization
 	void Awake () {
         networkMatch = gameObject.AddComponent<NetworkMatch>();
@@ -23,6 +23,7 @@ public class CarrierPigeon : NetworkManager {
 	
 	public void HostGame(string guid, string externalIP) { //include info to advertise
         string name = string.Join(":", new string[] { externalIP, Network.player.ipAddress, guid }); //Format the name of the match with the server information that clients will need
+        Debug.Log("Creating Match");
         networkMatch.CreateMatch(name, 2, true, "", externalIP, Network.player.ipAddress, 0, 0, OnMatchCreate);
 
     }
@@ -32,7 +33,13 @@ public class CarrierPigeon : NetworkManager {
         networkMatch.ListMatches(0, 1, "", true, 0, 0, OnMatchList);
     }
 
+    public override void OnMatchCreate(bool success, string extendedInfo, MatchInfo matchInfo) {
+        base.OnMatchCreate(success, extendedInfo, matchInfo);
+        Debug.Log("Match created.");
+    }
+
     public override void OnMatchList(bool success, string extendedInfo, List<MatchInfoSnapshot> matchList) {
+        
         if (!success) {
             Debug.Log("OnMatchList(): Matches not listed successfully");
             return;

@@ -32,6 +32,10 @@ public class NATHelper : MonoBehaviour
 
     void Start()
     {
+        natPunchthroughClient = null;
+        firstTimeConnect = true;
+
+        Debug.Log("NATHelper Starting Up");
         rakPeer = RakPeerInterface.GetInstance();
 
         StartCoroutine(connectToNATFacilitator());
@@ -252,10 +256,8 @@ public class NATHelper : MonoBehaviour
 
     public void RestartNAT() {
         Debug.Log("Force Restart NATHelper, please wait");
-        isReady = false;
-        StopAllCoroutines();
-        rakPeer.Shutdown(0);
-        StartCoroutine(connectToNATFacilitator());
+        
+
     }
     
     void OnApplicationQuit()

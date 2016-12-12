@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System;
 using System.Collections.Generic;
 using UnityEngine.Networking;
 using System.IO;
@@ -30,6 +31,19 @@ public class ServerManager {
         return true;
     }
 
+    void RobustConnect(Server server, string connectAddress, int connectPort) {
+        while (true) {
+            bool success = server.Connect(connectAddress, connectPort);
+            if (success) {
+                Debug.Log("Congratulations, peer connection achieved. Ready to begin.");
+                break;
+            }
+            else {
+                //Debug.Log("Retrying");
+            }
+        }
+    }
+
     public bool SpawnClient(int listenPort, string connectAddress, int connectPort) {
         bool isPortAlreadyWatched = false;
         foreach (Server s in servers) {
@@ -42,17 +56,16 @@ public class ServerManager {
         Server newServer = new Server();
         newServer.SetupServer(listenPort);
         servers.Add(newServer);
-        bool success = newServer.Connect(connectAddress, connectPort);
-        if (success) {
-            Debug.Log("Congratulations, peer connection achieved. Ready to begin.");
-        }
+        RobustConnect(newServer, connectAddress, connectPort);
         return true;
     }
 
     
 
     //Checks for packets from all servers.
-    void Receive() {
+    public void Receive() {
+        if (servers.Count < 1)
+            return;
         int recHostId;
         int connectionId;
         int channelId;
@@ -67,8 +80,9 @@ public class ServerManager {
             break;
 
             case NetworkEventType.ConnectEvent:    //2
+            Debug.Log("Recieved ConnectEvent, registering peer");
             RegisterPeer(connectionId, recHostId);
-            Debug.Log("Recieved ConnectEvent");
+            
             break;
 
             case NetworkEventType.DataEvent:       //3

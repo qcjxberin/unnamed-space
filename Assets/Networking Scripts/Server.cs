@@ -51,16 +51,10 @@ class Server {
         int connId;
         connId = NetworkTransport.Connect(socketId, address, port, 0, out err);
         NetworkError error = (NetworkError)err;
-        Debug.Log("Server with id connected to peer " + address + ":" + port + " with error code " + error.ToString());
+        Debug.Log("Server with id tried to connect to peer " + address + ":" + port + " with error code " + error.ToString());
         if (error.Equals(NetworkError.Ok)) {
-            bool success = AcceptPeer(connId);
-            if (success) {
-                Debug.Log("Successfully registered new connection.");
-                return true;
-            }else {
-                Debug.Log("Server did not register new connection.");
-                return false;
-            }
+            Debug.Log("Server successfully made connection with peer, awaiting connect confirmation.");
+            return true;
         }else {
             Debug.Log("NetworkTransport.Connect() had an error. Did not connect to peer.");
             return false;
