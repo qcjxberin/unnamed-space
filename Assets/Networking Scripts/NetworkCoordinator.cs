@@ -91,6 +91,7 @@ public class NetworkCoordinator : MonoBehaviour {
     public void EnterPunchingMode() {
         Destroy(nath);
         nath = gameObject.AddComponent<NATHelper>();
+        //nath.RestartNAT();
     }
 }
 

@@ -47,6 +47,9 @@ public class NATHelper : MonoBehaviour
      */
     IEnumerator connectToNATFacilitator()
     {
+        Debug.Log("Beginning connectToNATFacilitator(), waiting for all connections to disconnect");
+        //yield return new WaitForSeconds(5);
+        rakPeer.Shutdown(0);
         // Start the RakNet interface listening on a random port
         // We never need more than 2 connections, one to the Facilitator and one to either the server or the latest incoming client
         // Each time a client connects on the server RakNet is shut down and restarted with two fresh connections
@@ -82,7 +85,7 @@ public class NATHelper : MonoBehaviour
 
         // We store this for later so that we can tell which incoming messages are coming from the facilitator
         facilitatorSystemAddress = packet.systemAddress;
-
+        Debug.Log("Facilitator System Address = " + facilitatorSystemAddress);
         // Now that we have an external connection we can get the externalIP
         externalIP = rakPeer.GetExternalID(packet.systemAddress).ToString(false);
         Debug.Log("After connecting to Facilitator, externalIP = " + externalIP);
@@ -255,8 +258,22 @@ public class NATHelper : MonoBehaviour
     }
 
     public void RestartNAT() {
+        isReady = false;
         Debug.Log("Force Restart NATHelper, please wait");
-        
+        StopAllCoroutines();
+        SystemAddress[] conns = new SystemAddress[0];
+        ushort num = 0;
+        rakPeer.GetConnectionList(out conns, ref num);
+        Debug.Log("Closing " + num + " connections.");
+        foreach(SystemAddress sa in conns) {
+            rakPeer.CloseConnection(sa, true);
+        }
+        rakPeer.CloseConnection(facilitatorSystemAddress, true);
+        rakPeer.Shutdown(0);
+        //rakPeer.Dispose();
+        //rakPeer = RakPeerInterface.GetInstance();
+
+        StartCoroutine(connectToNATFacilitator());
 
     }
     

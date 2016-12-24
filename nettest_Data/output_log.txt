@@ -1,14 +1,15 @@
-Initialize engine version: 5.4.1f1 (649f48bbbf0f)
+Initialize engine version: 5.5.0f3 (38b4efef76f0)
 GfxDevice: creating device client; threaded=1
 VR: OpenVR Error! OpenVR failed initialization with error code VRInitError_Init_HmdNotFoundPresenceFailed: "Hmd Not Found Presence Failed (126)"!
  
-(Filename:  Line: 771)
+(Filename:  Line: 959)
 
 Direct3D:
     Version:  Direct3D 11.0 [level 11.0]
     Renderer: NVIDIA GeForce GTX 960M (ID=0x139b)
     Vendor:   NVIDIA
     VRAM:     1995 MB
+    Driver:   20.19.15.4331
 Begin MonoManager ReloadAssembly
 Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.dll (this message is harmless)
 Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.dll into Unity Child Domain
@@ -20,90 +21,102 @@ Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\U
 Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.UI.dll into Unity Child Domain
 Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.Networking.dll (this message is harmless)
 Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.Networking.dll into Unity Child Domain
-- Completed reload, in  0.124 seconds
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.PlaymodeTestsRunner.dll (this message is harmless)
+Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.PlaymodeTestsRunner.dll into Unity Child Domain
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.VR.dll (this message is harmless)
+Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.VR.dll into Unity Child Domain
+- Completed reload, in  0.216 seconds
 Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\System.Core.dll (this message is harmless)
 Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\System.dll (this message is harmless)
 <RI> Initializing input.
 <RI> Input initialized.
-desktop: 1920x1080 60Hz; virtual: 1920x1080 at 0,0
+desktop: 3840x2160 60Hz; virtual: 3840x2160 at 0,0
 <RI> Initialized touch support.
 VR: OpenVR Error! OpenVR failed initialization with error code VRInitError_Init_HmdNotFoundPresenceFailed: "Hmd Not Found Presence Failed (126)"!
  
-(Filename:  Line: 771)
+(Filename:  Line: 959)
 
 VR: OpenVR Error! OpenVR failed initialization with error code VRInitError_Init_HmdNotFoundPresenceFailed: "Hmd Not Found Presence Failed (126)"!
  
-(Filename:  Line: 771)
+(Filename:  Line: 959)
 
-UnloadTime: 0.868444 ms
+UnloadTime: 1.376445 ms
 NATHelper Starting Up
  
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Beginning connectToNATFacilitator()
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
 Setting up 1 worker threads for Enlighten.
-  Thread -> id: 1958 -> priority: 1 
-Connected: 454863592372045365
+  Thread -> id: 287c -> priority: 1 
+Connected: 1080863971616698987
  
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-After connecting to Facilitator, externalIP = 12.130.117.103
+After connecting to Facilitator, externalIP = 24.237.158.1
  
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
 Creating Match
  
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
 MatchMakingClient Create :https://mm.unet.unity3d.com/json/reply/CreateMatchRequest
  
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
 Beginning to listen for incoming punches.
  
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
 Match created.
  
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-Received punch through from 454863592372045365 172.19.131.26|56730
+Received punch through from 1080863971616698987 10.106.154.234|52477
  
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
 Received incoming RakNet connection.
  
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
 Server receieved hole punch, spawning server on port
  
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-Starting up host at port 61231
+Starting up host at port 61988
  
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-Connected: 454863592372045365
+Beginning connectToNATFacilitator()
  
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-After connecting to Facilitator, externalIP = 12.130.117.103
+Connected: 1080863971616698987
  
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+After connecting to Facilitator, externalIP = 24.237.158.1
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
 Recieved ConnectEvent, registering peer
  
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
 Registering new peer to serverId 1
  
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
 Successfully registered new peer.
  
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-Log: connection {1} has been disconnected by timeout; address {::ffff:127.0.0.1:56730}
+Log: connection {1} has been disconnected by timeout; address {::ffff:127.0.0.1:52477}
 Recieved DisonnectEvent
  
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
