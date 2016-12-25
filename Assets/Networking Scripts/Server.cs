@@ -4,7 +4,7 @@ using UnityEngine.Networking;
 using System.Collections.Generic;
 
 
-class Server {
+public class Server {
 
     
 
@@ -16,7 +16,7 @@ class Server {
     int port;
     byte reliableChannel;
     byte unreliableChannel;
-    int socketId;
+    int socketID;
 
     List<PeerInfo> peers = new List<PeerInfo>();
 
@@ -25,14 +25,15 @@ class Server {
 	    
 	}
 
-    public int getSocketId() {
-        return socketId;
+    public int getSocketID() {
+        return socketID;
     }
     public int getPort() {
         return port;
     }
 
     public void SetupServer(int listenPort) {
+        port = listenPort;
         Debug.Log("Starting up host at port " + listenPort);
         NetworkTransport.Init();
         ConnectionConfig config = new ConnectionConfig();
@@ -42,16 +43,16 @@ class Server {
         
         HostTopology topology = new HostTopology(config, 10);
 
-        socketId = NetworkTransport.AddHost(topology, listenPort);
+        socketID = NetworkTransport.AddHost(topology, listenPort);
         isSetup = true;
     }
 
     public bool Connect(string address, int port) {
         byte err;
         int connId;
-        connId = NetworkTransport.Connect(socketId, address, port, 0, out err);
+        connId = NetworkTransport.Connect(socketID, address, port, 0, out err);
         NetworkError error = (NetworkError)err;
-        Debug.Log("Server with id tried to connect to peer " + address + ":" + port + " with error code " + error.ToString());
+        Debug.Log("Server with socketID " + socketID + "tried to connect to peer " + address + ":" + port + " with error code " + error.ToString());
         if (error.Equals(NetworkError.Ok)) {
             Debug.Log("Server successfully made connection with peer, awaiting connect confirmation.");
             return true;
@@ -83,11 +84,12 @@ class Server {
     }
 
     public bool BroadcastAll(byte[] packet) {
+        Debug.Log("BroadcastAll");
         bool successflag = true;
         byte error;
         foreach(PeerInfo peer in peers) {
             byte err;
-            bool success = NetworkTransport.Send(socketId, peer.connectionId, reliableChannel, packet, packet.Length, out err);
+            bool success = NetworkTransport.Send(socketID, peer.connectionId, reliableChannel, packet, packet.Length, out err);
             if (!success) {
                 successflag = false;
                 error = err;

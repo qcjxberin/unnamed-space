@@ -2,13 +2,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.Networking;
+using UnityEngine.UI;
 
 public class NetworkCoordinator : MonoBehaviour {
     ServerManager sm = new ServerManager();
     NATHelper nath;
     CarrierPigeon pigeon;
     int punchCounter = 0;
-
+    public Text debugText;
     List<OutboundPunchContainer> outboundPunches = new List<OutboundPunchContainer>();
     
 
@@ -21,6 +22,7 @@ public class NetworkCoordinator : MonoBehaviour {
 
     void Update() {
         sm.Receive();
+        UpdateDebug();
     }
 	
 	public void CoordinatorHostGame() {
@@ -28,13 +30,14 @@ public class NetworkCoordinator : MonoBehaviour {
             pigeon.HostGame(nath.guid, nath.externalIP);
         }
         Debug.Log("Beginning to listen for incoming punches.");
-        nath.startListeningForPunchthrough(onHolePunchedServer);
+        StartCoroutine(WaitForPunches());
             
     }
 
     void onHolePunchedServer(int listenPort, string exIP) {
         Debug.Log("Server receieved hole punch, spawning server on port");
         sm.SpawnServer(listenPort);
+        StartCoroutine(WaitForPunches());
     }
 
     public void CoordinatorJoinGame() {
@@ -78,8 +81,8 @@ public class NetworkCoordinator : MonoBehaviour {
             }
         }
         //ServerManager.SpawnClient() creates an ordinary node and then connects it to the specified target.
-        sm.SpawnClient(listenPort, addressToConnectTo, connectPort);
-
+        sm.SpawnServerThenConnect(listenPort, addressToConnectTo, connectPort);
+        Debug.Log("OnHolePunchedClient in NetworkCoordinator has finished.");
 
     }
 
@@ -88,10 +91,28 @@ public class NetworkCoordinator : MonoBehaviour {
             yield return new WaitForEndOfFrame();
         nath.punchThroughToServer(guid, onHolePunchedClient);
     }
+    IEnumerator WaitForPunches() {
+        while (!nath.isReady)
+            yield return new WaitForEndOfFrame();
+        nath.startListeningForPunchthrough(onHolePunchedServer);
+    }
     public void EnterPunchingMode() {
-        Destroy(nath);
-        nath = gameObject.AddComponent<NATHelper>();
-        //nath.RestartNAT();
+        //Destroy(nath);
+        //nath = gameObject.AddComponent<NATHelper>();
+        nath.RestartNAT();
+    }
+
+    public void PingAll() {
+        sm.PingAllPeers();
+        
+    }
+
+    public void UpdateDebug() {
+        string output = "";
+        foreach(Server s in sm.servers) {
+            output += "Server " + s.getSocketID() + " watching port " + s.getPort() + "\n";
+        }
+        debugText.text = output;
     }
 }
 

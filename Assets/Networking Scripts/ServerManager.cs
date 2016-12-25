@@ -9,26 +9,26 @@ using System.Runtime.Serialization.Formatters.Binary;
 public class ServerManager {
 
     public string shout;
-
-    List<Server> servers = new List<Server>();
+    
+    public List<Server> servers = new List<Server>();
 
     //Request to create a new server in the conglomeration of servers.
     //Probably originates from a NAT punchthrough. We should check if
     //the port is already being watched, though, by combing through our
     //list of existing servers.
-    public bool SpawnServer(int newPort) {
+    public Server SpawnServer(int newPort) {
         bool isPortAlreadyWatched = false;
         foreach(Server s in servers) {
             if (s.isSetup && s.getPort() == newPort)
                 isPortAlreadyWatched = true;
         }
         if (isPortAlreadyWatched) {
-            return false;
+            return null;
         }
         Server newServer = new Server();
         newServer.SetupServer(newPort);
         servers.Add(newServer);
-        return true;
+        return newServer;
     }
 
     void RobustConnect(Server server, string connectAddress, int connectPort) {
@@ -44,18 +44,10 @@ public class ServerManager {
         }
     }
 
-    public bool SpawnClient(int listenPort, string connectAddress, int connectPort) {
-        bool isPortAlreadyWatched = false;
-        foreach (Server s in servers) {
-            if (s.isSetup && s.getPort() == listenPort)
-                isPortAlreadyWatched = true;
-        }
-        if (isPortAlreadyWatched) {
-            return false;
-        }
-        Server newServer = new Server();
-        newServer.SetupServer(listenPort);
-        servers.Add(newServer);
+
+    
+    public bool SpawnServerThenConnect(int listenPort, string connectAddress, int connectPort) {
+        Server newServer = SpawnServer(listenPort);
         RobustConnect(newServer, connectAddress, connectPort);
         return true;
     }
@@ -97,11 +89,11 @@ public class ServerManager {
         }
     }
 
-    void RegisterPeer(int connectId, int serverId) {
+    void RegisterPeer(int connectID, int serverID) {
         foreach(Server s in servers) {
-            if(s.getSocketId() == serverId) {
-                Debug.Log("Registering new peer to serverId " + serverId);
-                bool success = s.AcceptPeer(connectId);
+            if(s.getSocketID() == serverID) {
+                Debug.Log("Registering new peer to serverId " + serverID);
+                bool success = s.AcceptPeer(connectID);
                 switch (success) {
                     case true:
                     Debug.Log("Successfully registered new peer.");
@@ -120,6 +112,10 @@ public class ServerManager {
             byte[] newData = new byte[0];
             data.CopyTo(newData, 1);
             ParseAsShout(newData);
+        }
+        if (data[0] == 7) { //indicator
+            Debug.Log("Recieved an indicator ping!");
+            GameObject.FindObjectOfType<indicator>().Ping();
         }
     }
     void ParseAsShout(byte[] data) {
@@ -144,6 +140,18 @@ public class ServerManager {
             bool success = s.BroadcastAll(packet);
             if (!success) {
                 Debug.Log("BroadcastAll couldn't broadcast properly.");
+            }
+        }
+    }
+    public void PingAllPeers() {
+        Debug.Log("Pinging all clients.");
+        
+        byte[] packet = new byte[1];
+        packet[0] = 7;
+        foreach (Server s in servers) {
+            bool success = s.BroadcastAll(packet);
+            if (!success) {
+                Debug.Log("PingAll couldn't broadcast properly.");
             }
         }
     }

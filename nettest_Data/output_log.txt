@@ -25,7 +25,7 @@ Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\U
 Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.PlaymodeTestsRunner.dll into Unity Child Domain
 Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.VR.dll (this message is harmless)
 Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.VR.dll into Unity Child Domain
-- Completed reload, in  0.216 seconds
+- Completed reload, in  0.133 seconds
 Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\System.Core.dll (this message is harmless)
 Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\System.dll (this message is harmless)
 <RI> Initializing input.
@@ -40,66 +40,146 @@ VR: OpenVR Error! OpenVR failed initialization with error code VRInitError_Init_
  
 (Filename:  Line: 959)
 
-UnloadTime: 1.376445 ms
+UnloadTime: 2.314224 ms
 NATHelper Starting Up
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-Beginning connectToNATFacilitator()
+Beginning connectToNATFacilitator(), waiting for all connections to disconnect
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
 Setting up 1 worker threads for Enlighten.
-  Thread -> id: 287c -> priority: 1 
-Connected: 1080863971616698987
+  Thread -> id: 370 -> priority: 1 
+Connected: 162129670335186605
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-After connecting to Facilitator, externalIP = 24.237.158.1
+Facilitator System Address = 50.57.111.104|61111
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-Creating Match
+After connecting to Facilitator, externalIP = 65.74.55.39
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-MatchMakingClient Create :https://mm.unet.unity3d.com/json/reply/CreateMatchRequest
+MatchMakingClient ListMatches :https://mm.unet.unity3d.com/json/reply/ListMatchRequest
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-Beginning to listen for incoming punches.
+Acquired match info. Preparing to punch.
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-Match created.
+Force Restart NATHelper, please wait
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-Received punch through from 1080863971616698987 10.106.154.234|52477
+Closing 0 connections.
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-Received incoming RakNet connection.
+Waiting for facilitator to acknowledge disconnect...
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-Server receieved hole punch, spawning server on port
+Facilitator successfully disconnected, shutting down RakNet
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-Starting up host at port 61988
+Reconnecting to Facilitator
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-Beginning connectToNATFacilitator()
+Beginning connectToNATFacilitator(), waiting for all connections to disconnect
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-Connected: 1080863971616698987
+Connected: 162129670335186605
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-After connecting to Facilitator, externalIP = 24.237.158.1
+Facilitator System Address = 50.57.111.104|61111
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+After connecting to Facilitator, externalIP = 65.74.55.39
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Hole punched! Port: 49670
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Connected (ID_CONNECTION_REQUEST_ACCEPTED)
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+WaitForResponseFromServer is reconnecting to facilitator.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Punched hole to server GUID 292734059538000726, about to make connection.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Starting up host at port 51057
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Server with socketID 0tried to connect to peer 127.0.0.1:49670 with error code Ok
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Server successfully made connection with peer, awaiting connect confirmation.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Congratulations, peer connection achieved. Ready to begin.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+OnHolePunchedClient in NetworkCoordinator has finished.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+WaitForResponseFromServer has finished performing callback.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Force Restart NATHelper, please wait
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Closing 0 connections.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Waiting for facilitator to acknowledge disconnect...
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Facilitator successfully disconnected, shutting down RakNet
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Reconnecting to Facilitator
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Beginning connectToNATFacilitator(), waiting for all connections to disconnect
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Connected: 162129670335186605
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Facilitator System Address = 50.57.111.104|61111
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+After connecting to Facilitator, externalIP = 65.74.55.39
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
@@ -107,7 +187,7 @@ Recieved ConnectEvent, registering peer
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-Registering new peer to serverId 1
+Registering new peer to serverId 0
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
@@ -115,7 +195,621 @@ Successfully registered new peer.
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
-Log: connection {1} has been disconnected by timeout; address {::ffff:127.0.0.1:52477}
+Pinging all clients.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+BroadcastAll
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Initialize engine version: 5.5.0f3 (38b4efef76f0)
+GfxDevice: creating device client; threaded=1
+VR: OpenVR Error! OpenVR failed initialization with error code VRInitError_Init_HmdNotFoundPresenceFailed: "Hmd Not Found Presence Failed (126)"!
+ 
+(Filename:  Line: 959)
+
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.0]
+    Renderer: NVIDIA GeForce GTX 960M (ID=0x139b)
+    Vendor:   NVIDIA
+    VRAM:     1995 MB
+    Driver:   20.19.15.4331
+Begin MonoManager ReloadAssembly
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.dll (this message is harmless)
+Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.dll into Unity Child Domain
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\Assembly-CSharp-firstpass.dll (this message is harmless)
+Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\Assembly-CSharp-firstpass.dll into Unity Child Domain
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\Assembly-CSharp.dll (this message is harmless)
+Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\Assembly-CSharp.dll into Unity Child Domain
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.UI.dll (this message is harmless)
+Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.UI.dll into Unity Child Domain
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.Networking.dll (this message is harmless)
+Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.Networking.dll into Unity Child Domain
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.PlaymodeTestsRunner.dll (this message is harmless)
+Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.PlaymodeTestsRunner.dll into Unity Child Domain
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.VR.dll (this message is harmless)
+Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.VR.dll into Unity Child Domain
+- Completed reload, in  0.030 seconds
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\System.Core.dll (this message is harmless)
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\System.dll (this message is harmless)
+<RI> Initializing input.
+<RI> Input initialized.
+desktop: 3840x2160 60Hz; virtual: 3840x2160 at 0,0
+<RI> Initialized touch support.
+VR: OpenVR Error! OpenVR failed initialization with error code VRInitError_Init_HmdNotFoundPresenceFailed: "Hmd Not Found Presence Failed (126)"!
+ 
+(Filename:  Line: 959)
+
+VR: OpenVR Error! OpenVR failed initialization with error code VRInitError_Init_HmdNotFoundPresenceFailed: "Hmd Not Found Presence Failed (126)"!
+ 
+(Filename:  Line: 959)
+
+UnloadTime: 3.534225 ms
+NATHelper Starting Up
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Beginning connectToNATFacilitator(), waiting for all connections to disconnect
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Setting up 1 worker threads for Enlighten.
+  Thread -> id: 2e1c -> priority: 1 
+Connected: 1017813599591325123
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Facilitator System Address = 50.57.111.104|61111
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+After connecting to Facilitator, externalIP = 65.74.55.39
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+MatchMakingClient ListMatches :https://mm.unet.unity3d.com/json/reply/ListMatchRequest
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Acquired match info. Preparing to punch.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Force Restart NATHelper, please wait
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Closing 0 connections.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Waiting for facilitator to acknowledge disconnect...
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Facilitator successfully disconnected, shutting down RakNet
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Reconnecting to Facilitator
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Beginning connectToNATFacilitator(), waiting for all connections to disconnect
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Connected: 1017813599591325123
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Facilitator System Address = 50.57.111.104|61111
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+After connecting to Facilitator, externalIP = 65.74.55.39
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Hole punched! Port: 51059
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Connected (ID_CONNECTION_REQUEST_ACCEPTED)
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+WaitForResponseFromServer is reconnecting to facilitator.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Punched hole to server GUID 292734059538000726, about to make connection.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Starting up host at port 55241
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Server with socketID 0tried to connect to peer 127.0.0.1:51059 with error code Ok
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Server successfully made connection with peer, awaiting connect confirmation.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Congratulations, peer connection achieved. Ready to begin.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+OnHolePunchedClient in NetworkCoordinator has finished.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+WaitForResponseFromServer has finished performing callback.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Force Restart NATHelper, please wait
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Closing 0 connections.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Waiting for facilitator to acknowledge disconnect...
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Facilitator successfully disconnected, shutting down RakNet
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Reconnecting to Facilitator
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Beginning connectToNATFacilitator(), waiting for all connections to disconnect
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Connected: 1017813599591325123
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Facilitator System Address = 50.57.111.104|61111
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+After connecting to Facilitator, externalIP = 65.74.55.39
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved ConnectEvent, registering peer
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Registering new peer to serverId 0
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Successfully registered new peer.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Pinging all clients.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+BroadcastAll
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Pinging all clients.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+BroadcastAll
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Pinging all clients.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+BroadcastAll
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Pinging all clients.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+BroadcastAll
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Pinging all clients.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+BroadcastAll
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Pinging all clients.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+BroadcastAll
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Pinging all clients.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+BroadcastAll
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Pinging all clients.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+BroadcastAll
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Pinging all clients.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+BroadcastAll
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Raw data: System.Byte[]
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved an indicator ping!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Raw data: System.Byte[]
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved an indicator ping!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+ReRievedeDaieved DataEvent
+ 
+(Filename: C:/buildslateaEveny/
+ 
+(uFilenami:fac/s/generuilds/commoun/runty/build/imetifa/DebgengBindings.gen.epratend/commo
+
+n/runtime/DebugBinwdings.gens.cmp BLine:y51)
+
+[]
+ 
+(awi dnamta: System. Byte[]
+ 
+sFilename: C:/buildave/ave/unity/uuildnity/bu/lrtifactd/aentifacesrganeraed/comten//cruntime/DebugBDinuigBingingn.cp.gen.cpppL Line: 51
+
+
+
+ReciRved an iedicevetor  pniing!c
+ a
+tFilename: C:obu ping!
+ 
+(Fiielamdslave/bnuildbuild/artifscls/gee/erated/commun/ityunt/mbuildugBindiifacts/genenatge.dencommon/cru Liime/ 51ebu
+
+gBindings.gen.cpp Line: 51)
+
+Recieved DataERentciev
+ D
+(FilentaEvent
+a
+(e: ile:name:d C:/buunity/build/artifacts/geny/buiedd//common/sruenermted//cbommon/runt.gen.cpp Line: 51).
+
+n.cpp Lineaw data: S y1s
+
+Raw dttam. Systey.Bte[]]
+ 
+(
+FFilename: C:/buililename: Cd/buslasea/ununitbu/build/aiftcts/generatrated/cmmmmon/runtime/Debuon/runngsme/Debugp Linin:gs.ge
+
+Reciev.cp an ind:icato
+r
+ ping!
+ 
+(Filename:ato:/buildg!
+ 
+(Filetnameild/art/fabus/generailddslamone/uunity/b/uild/aintiings.geen.cprpt d/Line:n/1r
+u
+ntime/DebugBindings.gen.cpp Line: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Raw data: System.Byte[]
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved an indicator ping!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Raw data: System.Byte[]
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved an indicator ping!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Raw data: System.Byte[]
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved an indicator ping!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Raw data: System.Byte[]
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved an indicator ping!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Raw data: System.Byte[]
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved an indicator ping!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Raw data: System.Byte[]
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved an indicator ping!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Raw data: System.Byte[]
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved an indicator ping!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Raw data: System.Byte[]
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved an indicator ping!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buEveni
+ l
+(slave/namnity/build/artifacts/generated/commen/runtime/DebugBind:ngs.gen.cpp Li e: 51)
+
+Raw daCa: Sbusteld.sytla]e/n 
+(Filenam/ae: C:/tbuilndslave/commoy/bruniime/DebugBcnts/gengenacpp Lineted/co
+
+Raw data: System.Byte[m
+ onr(Filenamuntimeb/Debslave/unis.gy/buildpp artifacts/generated/commoLirun: ime/5ebu)
+in
+dingRecievepp Line: 5d)
+
+ an iiedicedaan r pndicatoripngg!
+
+ 
+(Filename (:Fililndmlave/:ubityildslave/unity//uiild/artiftctsacts/generat/generated/ru/cime/DebugBindiogsm.ngruntime/DebugBendicngsLigeen.cpp
+in
+e: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+RaR data: ciyseved Data]
+ 
+(eFt
+ i
+lenlame: C:/:/builislaveludslyabve/u/ityrtibuilf/actr/ifacerates/geneoammon/rmmontn/erDebtume/DBibugBindings.gen.cpp Linend51)
+
+Recieved an indicator ping!i
+ng
+sFilgen.cmp:  ine:/buildsl:v /unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+51)
+
+Raw data: System.Byte[]
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved an indicator ping!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Raw data: System.Byte[]
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved an indicator ping!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Raw data: System.Byte[]
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved an indicator ping!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Raw data: System.Byte[]
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved an indicator ping!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Raw data: System.Byte[]
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved an indicator ping!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Raw data: System.Byte[]
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved an indicator ping!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Raw data: System.Byte[]
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved an indicator ping!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved DataEvRnt
+ 
+(Filenaie: Cved Dat:Evbuildslave/unnt
+ 
+(Filename: C:ibuy/ldsild/artifactl/generated/veomm/n/unity/buieblgd/artifacts/gcnera eLinem mo)/ru
+n
+time/DRaw Bindings.gen.cppaLta:ne Syste
+m
+.BytRaw 
+da
+(a: ilenSmestem.Bybutle[]a
+ v
+eFiunity/build/artif: Ccts/generated/common/runtime/De/buildslave/dunity/.bui.cpartifacts/genepa Ldinem: n/ru1)tim
+
+e/RecieBved an .inndicatLore: ping!
+ 
+(F51)
+
+me: Ce/ved anliadicator vin/ug!
+ 
+(Fild/name: Cartifactls/geneirated/ldo/art/ifatitme/enDebugB/ndcoms.goen.cpp Line: u51)ndin
+
+gs.gen.cpp Line: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Raw data: System.Byte[]
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved an indicator ping!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved DataEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Raw data: System.Byte[]
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Recieved an indicator ping!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Log: connection {1} has been disconnected by timeout; address {::ffff:127.0.0.1:49670}
+Recieved DisonnectEvent
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Log: connection {1} has been disconnected by timeout; address {::ffff:127.0.0.1:51059}
 Recieved DisonnectEvent
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
