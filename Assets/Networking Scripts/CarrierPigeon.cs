@@ -48,6 +48,7 @@ public class CarrierPigeon : NetworkManager {
             Debug.Log("No matches found.");
             return;
         }
+        Debug.Log("Found match information.");
         string[] data = matchList[0].name.Split(':');
         string exIP = data[0];
         string inIP = data[1];

@@ -32,6 +32,8 @@ public class NATHelper : MonoBehaviour
 
     void Start()
     {
+        Debug.logger.filterLogType = LogType.Log;
+        Debug.developerConsoleVisible = true;
         natPunchthroughClient = null;
         firstTimeConnect = true;
 
@@ -179,7 +181,7 @@ public class NATHelper : MonoBehaviour
                         rakPeer.Shutdown(0);
 
                         // Hole is punched, UNet can start listening
-                        isReady = false;
+                        //isReady = false;
                         onHolePunched(natListenPort, externalIP);
                         Debug.Log("waitForIncomingNATPunchThroughOnServer is reconnecting to facilitator");
                         // Reconnect to Facilitator for next punchthrough
@@ -235,21 +237,24 @@ public class NATHelper : MonoBehaviour
                     case DefaultMessageIDTypes.ID_CONNECTION_REQUEST_ACCEPTED:
                         // Ok, we connected, we can now use GetExternalID to get the port to connect from.
                         natListenPort = rakPeer.GetExternalID(packet.systemAddress).GetPort();
-                        Debug.Log("Connected (ID_CONNECTION_REQUEST_ACCEPTED)");
+                        Debug.Log("RakNet Connected (ID_CONNECTION_REQUEST_ACCEPTED), waiting for remote disconnect");
                         // Now we wait for the server to disconnect us so that we know it is ready for the UNet connection
                         break;
 
                     case DefaultMessageIDTypes.ID_DISCONNECTION_NOTIFICATION:
+                        Debug.Log("Recieved remote disconnect, shutting down RakNet and performing callback");
                         // Server has disconnected us. We are ready to connect via UNet
 
                         // Shut down RakNet
-                        //rakPeer.Shutdown(0);
-
+                        rakPeer.Shutdown(0);
+                        //isReady = false;
                         // Hole is punched!
-                        Debug.Log("WaitForResponseFromServer is reconnecting to facilitator.");
+                        
                         onHolePunched(natListenPort, natConnectPort, hostGUID.g.ToString());
                         Debug.Log("WaitForResponseFromServer has finished performing callback.");
-                        RestartNAT();
+                        //Debug.Log("WaitForResponseFromServer is reconnecting to facilitator.");
+                        
+
                         yield break; // Totally done
 
                     default:
@@ -262,6 +267,9 @@ public class NATHelper : MonoBehaviour
     }
 
     public void RestartNAT() {
+        Debug.Log("<<< NAT REBOOT >>>");
+        rakPeer.Shutdown(0);
+        StartCoroutine(connectToNATFacilitator());
         isReady = false;
         Debug.Log("Force Restart NATHelper, please wait");
         //StopAllCoroutines();
@@ -319,6 +327,10 @@ public class NATHelper : MonoBehaviour
                     yield break; // Totally done
                 }
                 break;
+
+                default:
+                    Debug.Log("Something odd happened with facilitator reboot.");
+                    break;
                 
             }
         }

@@ -89,7 +89,7 @@ public class Server {
         byte error;
         foreach(PeerInfo peer in peers) {
             byte err;
-            bool success = NetworkTransport.Send(socketID, peer.connectionId, reliableChannel, packet, packet.Length, out err);
+            bool success = NetworkTransport.Send(socketID, peer.connectionId, unreliableChannel, packet, packet.Length, out err);
             if (!success) {
                 successflag = false;
                 error = err;

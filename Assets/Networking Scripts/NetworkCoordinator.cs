@@ -74,7 +74,9 @@ public class NetworkCoordinator : MonoBehaviour {
         }
 
         if(punchInfo.serverExternalIP == nath.externalIP) { //We're on the same LAN
+            Debug.Log("Target is on the same LAN!");
             if(punchInfo.serverInternalIP == Network.player.ipAddress) { //We're on the same computer!
+                Debug.Log("Target is on the same computer!");
                 addressToConnectTo = "127.0.0.1";
             } else {
                 addressToConnectTo = punchInfo.serverInternalIP; //Just stay inside the LAN.
@@ -89,6 +91,7 @@ public class NetworkCoordinator : MonoBehaviour {
     IEnumerator Punch(string guid) {
         while (!nath.isReady)
             yield return new WaitForEndOfFrame();
+        Debug.Log("Punch() routine is about to punchThroughToServer()");
         nath.punchThroughToServer(guid, onHolePunchedClient);
     }
     IEnumerator WaitForPunches() {
@@ -99,7 +102,7 @@ public class NetworkCoordinator : MonoBehaviour {
     public void EnterPunchingMode() {
         //Destroy(nath);
         //nath = gameObject.AddComponent<NATHelper>();
-        nath.RestartNAT();
+        //nath.RestartNAT();
     }
 
     public void PingAll() {
@@ -114,6 +117,8 @@ public class NetworkCoordinator : MonoBehaviour {
         }
         debugText.text = output;
     }
+
+    
 }
 
 class OutboundPunchContainer {
