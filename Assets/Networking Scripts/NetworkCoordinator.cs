@@ -48,11 +48,12 @@ public class NetworkCoordinator : MonoBehaviour {
 
     public void OnInfoAcquired(string serverExternalIP, string serverInternalIP, string serverGUID) { //Carrier pigeon has delivered game owner's data. Punch through to game owner.
         Debug.Log("Acquired match info. Preparing to punch.");
-        EnterPunchingMode(); //Reboot NAT system. This may take some time. Punch() will wait for it.
+        
         OutboundPunchContainer pc = new OutboundPunchContainer(serverExternalIP, serverInternalIP, serverGUID, punchCounter); //Record pigeon data for future use.
         punchCounter++;
         outboundPunches.Add(pc);
-        StartCoroutine(Punch(serverGUID)); //Punch() will punch to GUID when the NAT system is ready to do so.
+        //StartCoroutine(Punch(serverGUID)); //Punch() will punch to GUID when the NAT system is ready to do so.
+        PunchNow(serverGUID);
     }   
 
     void onHolePunchedClient(int listenPort, int connectPort, string serverGUID) {
@@ -87,23 +88,26 @@ public class NetworkCoordinator : MonoBehaviour {
         Debug.Log("OnHolePunchedClient in NetworkCoordinator has finished.");
 
     }
-
+    /*
     IEnumerator Punch(string guid) {
         while (!nath.isReady)
             yield return new WaitForEndOfFrame();
         Debug.Log("Punch() routine is about to punchThroughToServer()");
         nath.punchThroughToServer(guid, onHolePunchedClient);
+        yield break;
+    }
+    */
+    void PunchNow(string guid) {
+        nath.punchThroughToServer(guid, onHolePunchedClient);
     }
     IEnumerator WaitForPunches() {
+        Debug.Log("IEnumerator WaitForPunches()");
         while (!nath.isReady)
             yield return new WaitForEndOfFrame();
         nath.startListeningForPunchthrough(onHolePunchedServer);
+        yield break;
     }
-    public void EnterPunchingMode() {
-        //Destroy(nath);
-        //nath = gameObject.AddComponent<NATHelper>();
-        //nath.RestartNAT();
-    }
+    
 
     public void PingAll() {
         sm.PingAllPeers();

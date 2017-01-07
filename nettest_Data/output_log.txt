@@ -1,0 +1,62 @@
+Initialize engine version: 5.5.0f3 (38b4efef76f0)
+GfxDevice: creating device client; threaded=1
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.0]
+    Renderer: NVIDIA GeForce GTX 970 (ID=0x13c2)
+    Vendor:   NVIDIA
+    VRAM:     4058 MB
+    Driver:   21.21.13.7570
+Begin MonoManager ReloadAssembly
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.dll (this message is harmless)
+Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.dll into Unity Child Domain
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\Assembly-CSharp-firstpass.dll (this message is harmless)
+Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\Assembly-CSharp-firstpass.dll into Unity Child Domain
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\Assembly-CSharp.dll (this message is harmless)
+Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\Assembly-CSharp.dll into Unity Child Domain
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.UI.dll (this message is harmless)
+Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.UI.dll into Unity Child Domain
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.Networking.dll (this message is harmless)
+Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.Networking.dll into Unity Child Domain
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.PlaymodeTestsRunner.dll (this message is harmless)
+Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.PlaymodeTestsRunner.dll into Unity Child Domain
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.VR.dll (this message is harmless)
+Loading C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\UnityEngine.VR.dll into Unity Child Domain
+- Completed reload, in  0.116 seconds
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\System.Core.dll (this message is harmless)
+Platform assembly: C:\Users\finnn\Documents\unnamed-space\nettest_Data\Managed\System.dll (this message is harmless)
+<RI> Initializing input.
+<RI> Input initialized.
+desktop: 1920x1080 60Hz; virtual: 5760x1080 at -1920,0
+<RI> Initialized touch support.
+OpenVR initialized!
+ 
+(Filename:  Line: 381)
+
+UnloadTime: 0.723050 ms
+NATHelper Starting Up
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Beginning connectToNATFacilitator(), waiting for all connections to disconnect
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Setting up 2 worker threads for Enlighten.
+  Thread -> id: 2fe0 -> priority: 1 
+  Thread -> id: 292c -> priority: 1 
+Connected: 283726778283163309
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Facilitator System Address = 50.57.111.104|61111
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+After connecting to Facilitator, externalIP = 76.88.57.163
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+OpenVR Shutdown
+ 
+(Filename:  Line: 815)
+
