@@ -2,7 +2,7 @@
 using RakNet;
 using System;
 using System.Collections;
-
+using Utilities;
 /**
  * Uses RakNet to perform NAT Punchthrough using an externally hosted Facilitator.
  * Once a hole is punched a connection can be made via UNet HLAPI.
@@ -28,6 +28,9 @@ public class NATHelper : MonoBehaviour
     Action<int, string> onHolePunched;
     RakPeerInterface rakPeer;
 
+    public NATStatus mode = NATStatus.Uninitialized;
+    
+
     //public string testAddress;
 
     void Start()
@@ -48,6 +51,7 @@ public class NATHelper : MonoBehaviour
      */
     IEnumerator connectToNATFacilitator()
     {
+        mode = NATStatus.ConnectingToFacilitator;
         Debug.Log("Beginning connectToNATFacilitator(), waiting for all connections to disconnect");
         //yield return new WaitForSeconds(5);
         //rakPeer.Shutdown(0);
@@ -61,23 +65,35 @@ public class NATHelper : MonoBehaviour
             yield break;
         }
         
-        // Connect to the Facilitator
-        ConnectionAttemptResult connectResult = rakPeer.Connect(facilitatorIP, (ushort)facilitatorPort, null, 0);
-        if (connectResult != ConnectionAttemptResult.CONNECTION_ATTEMPT_STARTED)
-        {
-            Debug.Log("Failed to initialize connection to NAT Facilitator: " + connectResult.ToString());
-            yield break;
-        }
+        
 
         // Connecting, wait for response
         Packet packet;
-        while ((packet = rakPeer.Receive()) == null) yield return new WaitForEndOfFrame();
-        
-        // Was the connection accepted?
-        if (packet.data[0] != (byte)DefaultMessageIDTypes.ID_CONNECTION_REQUEST_ACCEPTED)
-        {
-            Debug.Log("Failed to connect to NAT Facilitator: " + ((DefaultMessageIDTypes)packet.data[0]));
-            yield break;
+        while (true) {
+            // Connect to the Facilitator
+            ConnectionAttemptResult connectResult = rakPeer.Connect(facilitatorIP, (ushort)facilitatorPort, null, 0);
+            if (connectResult != ConnectionAttemptResult.CONNECTION_ATTEMPT_STARTED) {
+                Debug.Log("Failed to initialize connection to NAT Facilitator: " + connectResult.ToString());
+                yield break;
+            }
+
+            while ((packet = rakPeer.Receive()) == null) yield return new WaitForEndOfFrame();
+
+            // Was the connection accepted?
+            if (!(packet.data[0] == (byte)DefaultMessageIDTypes.ID_CONNECTION_REQUEST_ACCEPTED)) {
+                if (packet.data[0] == (byte)DefaultMessageIDTypes.ID_ALREADY_CONNECTED) {
+                    Debug.Log("Says it's already connected. Trying again in 0.5s.");
+                    
+                    yield return new WaitForSeconds(0.5f);
+                    continue;
+                }
+                Debug.Log("Failed to connect to NAT Facilitator: " + ((DefaultMessageIDTypes)packet.data[0]));
+                yield break;
+            }
+            else {
+                //we have connected!
+                break;
+            }
         }
 
         // Success, we are connected to the Facilitator
@@ -111,8 +127,9 @@ public class NATHelper : MonoBehaviour
             // listening immediately.
             //StartCoroutine(waitForIncomingNATPunchThroughOnServer(onHolePunched));
         }
-
+        
         isReady = true;
+        mode = NATStatus.Idle;
     }
     
     /**
@@ -120,6 +137,7 @@ public class NATHelper : MonoBehaviour
      */
     public void startListeningForPunchthrough(Action<int, string> onHolePunched)
     {
+        mode = NATStatus.Listening;
         this.onHolePunched = onHolePunched;
         rakPeer.SetMaximumIncomingConnections(2);
         StartCoroutine(waitForIncomingNATPunchThroughOnServer(onHolePunched));
@@ -184,8 +202,8 @@ public class NATHelper : MonoBehaviour
                         onHolePunched(natListenPort, externalIP);
                         Debug.Log("waitForIncomingNATPunchThroughOnServer is reconnecting to facilitator");
                         // Reconnect to Facilitator for next punchthrough
-                        StartCoroutine(connectToNATFacilitator());
-                            
+                        //StartCoroutine(connectToNATFacilitator());
+                        
                         yield break; // Totally done
                     }
                     break;
@@ -203,6 +221,7 @@ public class NATHelper : MonoBehaviour
      */
     public void punchThroughToServer(string hostGUIDString, Action<int, int, string> onHolePunched)
     {
+        mode = NATStatus.Punching;
         RakNetGUID hostGUID = new RakNetGUID(ulong.Parse(hostGUIDString));
         natPunchthroughClient.OpenNAT(hostGUID, facilitatorSystemAddress);
         StartCoroutine(waitForResponseFromServer(hostGUID, onHolePunched));
@@ -269,8 +288,74 @@ public class NATHelper : MonoBehaviour
         }
     }
 
-    
+    public void RebootNAT() {
+        isReady = false;
+        Debug.Log("<<< REBOOT NAT >>>");
+        StopAllCoroutines();
+        switch (mode) {
+            case NATStatus.Uninitialized:
+            StartCoroutine(connectToNATFacilitator());
+            break;
 
+            case NATStatus.Idle: //already connected to facilitator, but nothing else is going on
+            return;
+            break;
+
+            case NATStatus.ConnectingToFacilitator:
+            rakPeer.Shutdown(0);
+            StartCoroutine(connectToNATFacilitator());
+            break;
+
+            case NATStatus.Listening:
+            rakPeer.Shutdown(0);
+            StartCoroutine(connectToNATFacilitator());
+            break;
+
+            case NATStatus.Punching:
+            rakPeer.Shutdown(0);
+            StartCoroutine(connectToNATFacilitator());
+            break;
+        }
+        //rakPeer.Shutdown(0);
+        //StartCoroutine(connectToNATFacilitator());
+    }
+    /*
+    IEnumerator PurgeAndReconnect() {
+        //rakPeer.CloseConnection(facilitatorSystemAddress, true);
+        float start = Time.time;
+        ushort natListenPort = 0;
+        while (true) {
+            
+            
+            yield return new WaitForEndOfFrame();
+            if(Time.time - start > 5) {
+                Debug.Log("PurgeAndReconnect timed out, reconnecting to Facilitator");
+                rakPeer.Shutdown(0);
+                StartCoroutine(connectToNATFacilitator());
+                yield break;
+            }
+            // Check for incoming packet
+            Packet packet = rakPeer.Receive();
+
+            // No packet, maybe next time
+            if (packet == null) continue;
+
+            // Got a packet, see what it is
+            RakNet.DefaultMessageIDTypes messageType = (DefaultMessageIDTypes)packet.data[0];
+            switch (messageType) {
+                case DefaultMessageIDTypes.ID_DISCONNECTION_NOTIFICATION:
+                if (packet.systemAddress == facilitatorSystemAddress) {
+                    Debug.Log("PurgeAndDisconnect has detected a facilitator disconnect");
+                    rakPeer.Shutdown(0);
+
+                    StartCoroutine(connectToNATFacilitator());
+                    yield break; // Totally done
+                }
+                break;
+            }
+        }
+    }
+    */
     void OnApplicationQuit()
     {
         rakPeer.Shutdown(0);

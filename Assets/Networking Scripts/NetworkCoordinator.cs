@@ -52,11 +52,12 @@ public class NetworkCoordinator : MonoBehaviour {
         OutboundPunchContainer pc = new OutboundPunchContainer(serverExternalIP, serverInternalIP, serverGUID, punchCounter); //Record pigeon data for future use.
         punchCounter++;
         outboundPunches.Add(pc);
-        //StartCoroutine(Punch(serverGUID)); //Punch() will punch to GUID when the NAT system is ready to do so.
-        PunchNow(serverGUID);
+        StartCoroutine(Punch(serverGUID)); //Punch() will punch to GUID when the NAT system is ready to do so.
+        //PunchNow(serverGUID);
     }   
 
     void onHolePunchedClient(int listenPort, int connectPort, string serverGUID) {
+        //return;
         Debug.Log("Punched hole to server GUID " + serverGUID + ", about to make connection.");
         
         int portToConnectTo = connectPort;
@@ -83,12 +84,16 @@ public class NetworkCoordinator : MonoBehaviour {
                 addressToConnectTo = punchInfo.serverInternalIP; //Just stay inside the LAN.
             }
         }
+        else {
+            addressToConnectTo = punchInfo.serverExternalIP;
+        }
         //ServerManager.SpawnClient() creates an ordinary node and then connects it to the specified target.
         sm.SpawnServerThenConnect(listenPort, addressToConnectTo, connectPort);
+        nath.RebootNAT();
         Debug.Log("OnHolePunchedClient in NetworkCoordinator has finished.");
 
     }
-    /*
+    
     IEnumerator Punch(string guid) {
         while (!nath.isReady)
             yield return new WaitForEndOfFrame();
@@ -96,7 +101,7 @@ public class NetworkCoordinator : MonoBehaviour {
         nath.punchThroughToServer(guid, onHolePunchedClient);
         yield break;
     }
-    */
+    
     void PunchNow(string guid) {
         nath.punchThroughToServer(guid, onHolePunchedClient);
     }

@@ -39,7 +39,7 @@ public class ServerManager {
                 break;
             }
             else {
-                //Debug.Log("Retrying");
+                Debug.Log("Retrying");
             }
         }
     }
