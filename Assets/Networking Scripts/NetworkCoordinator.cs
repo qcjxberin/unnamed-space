@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.Networking;
 using UnityEngine.UI;
+using Utilities;
 
 public class NetworkCoordinator : MonoBehaviour {
     ServerManager sm = new ServerManager();
@@ -11,7 +12,11 @@ public class NetworkCoordinator : MonoBehaviour {
     int punchCounter = 0;
     public Text debugText;
     List<OutboundPunchContainer> outboundPunches = new List<OutboundPunchContainer>();
-    
+
+    public Text NATStatusText;
+
+    const float PUNCH_TIME_SPACING = 0.2f;
+    float lastPunchTime = 0;
 
 	// Use this for initialization
 	void Start () {
@@ -23,6 +28,17 @@ public class NetworkCoordinator : MonoBehaviour {
     void Update() {
         sm.Receive();
         UpdateDebug();
+        UpdateNATStatus();
+        if (outboundPunches.Count > 0 && nath.mode == NATStatus.Idle) {
+            
+            lastPunchTime = Time.time;
+            OutboundPunchContainer toPunch = outboundPunches[0];
+            outboundPunches.RemoveAt(0);
+            StartCoroutine(RobustPunch(toPunch));
+
+        }
+        
+
     }
 	
 	public void CoordinatorHostGame() {
@@ -50,28 +66,30 @@ public class NetworkCoordinator : MonoBehaviour {
         Debug.Log("Acquired match info. Preparing to punch.");
         
         OutboundPunchContainer pc = new OutboundPunchContainer(serverExternalIP, serverInternalIP, serverGUID, punchCounter); //Record pigeon data for future use.
-        punchCounter++;
-        outboundPunches.Add(pc);
-        StartCoroutine(Punch(serverGUID)); //Punch() will punch to GUID when the NAT system is ready to do so.
+        QueuePunch(pc);
+        //RobustPunch(serverGUID, pc); //Punch() will punch to GUID when the NAT system is ready to do so.
         //PunchNow(serverGUID);
     }   
 
-    void onHolePunchedClient(int listenPort, int connectPort, string serverGUID) {
+    void QueuePunch(OutboundPunchContainer pc) {
+        outboundPunches.Insert(0, pc);
+    }
+
+    void onHolePunchedClient(int listenPort, int connectPort, string serverGUID, OutboundPunchContainer pc) {
         //return;
         Debug.Log("Punched hole to server GUID " + serverGUID + ", about to make connection.");
         
         int portToConnectTo = connectPort;
         string addressToConnectTo = "";
-        OutboundPunchContainer punchInfo = null;
-        //retrieve outbound punch information
-        foreach(OutboundPunchContainer pc in outboundPunches) {
-            if(pc.serverGUID == serverGUID) {
-                punchInfo = pc;
-                break;
-            }
-        }
+        OutboundPunchContainer punchInfo = pc;
+        
         if(punchInfo == null) {
-            Debug.Log("Can't find history of this hole punch being requested");
+            Debug.Log("Punch information missing.");
+            return;
+        }
+
+        if(punchInfo.serverGUID != serverGUID) {
+            Debug.Log("OutboundPunchContainer data GUID does not match punched GUID.");
             return;
         }
 
@@ -93,18 +111,21 @@ public class NetworkCoordinator : MonoBehaviour {
         Debug.Log("OnHolePunchedClient in NetworkCoordinator has finished.");
 
     }
+
+    void onPunchFailClient(OutboundPunchContainer pc) {
+        Debug.Log("ALERT: Hole Punch Failed. Either your router or your friend's router does not support NAT punchthrough.");
+        nath.RebootNAT();
+    }
     
-    IEnumerator Punch(string guid) {
-        while (!nath.isReady)
+    public IEnumerator RobustPunch(OutboundPunchContainer pc) {
+        while(nath.mode != NATStatus.Idle) {
             yield return new WaitForEndOfFrame();
+        }
         Debug.Log("Punch() routine is about to punchThroughToServer()");
-        nath.punchThroughToServer(guid, onHolePunchedClient);
+        nath.punchThroughToServer(pc.serverGUID, 8f, onHolePunchedClient, onPunchFailClient, pc);
         yield break;
     }
-    
-    void PunchNow(string guid) {
-        nath.punchThroughToServer(guid, onHolePunchedClient);
-    }
+
     IEnumerator WaitForPunches() {
         Debug.Log("IEnumerator WaitForPunches()");
         while (!nath.isReady)
@@ -123,23 +144,20 @@ public class NetworkCoordinator : MonoBehaviour {
         string output = "";
         foreach(Server s in sm.servers) {
             output += "Server " + s.getSocketID() + " watching port " + s.getPort() + "\n";
+            foreach(PeerInfo pi in s.getPeers()) {
+                output += "     Peer #" + pi.connectionId + "\n";
+            }
         }
         debugText.text = output;
+    }
+
+    public void UpdateNATStatus() {
+        //if (NATStatusText == null)
+            //return;
+        NATStatusText.text = "NAT Status: " + nath.mode;
     }
 
     
 }
 
-class OutboundPunchContainer {
-    public string serverExternalIP;
-    public string serverInternalIP;
-    public string serverGUID;
-    public int punchID;
 
-    public OutboundPunchContainer(string serverExIP, string serverInIP, string serverID, int id) {
-        serverExternalIP = serverExIP;
-        serverInternalIP = serverInIP;
-        serverGUID = serverID;
-        punchID = id;
-    }
-}

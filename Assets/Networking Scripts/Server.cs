@@ -32,6 +32,10 @@ public class Server {
         return port;
     }
 
+    public List<PeerInfo> getPeers() {
+        return peers;
+    }
+
     public void SetupServer(int listenPort) {
         port = listenPort;
         Debug.Log("Starting up host at port " + listenPort);
@@ -99,6 +103,8 @@ public class Server {
         return successflag;
         
     }
+
+    //public void TransmitInfo()
     
 
     

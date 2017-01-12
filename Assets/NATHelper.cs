@@ -25,7 +25,7 @@ public class NATHelper : MonoBehaviour
     NatPunchthroughClient natPunchthroughClient;
     SystemAddress facilitatorSystemAddress;
     bool firstTimeConnect = true;
-    Action<int, string> onHolePunched;
+    //Action<int, string> onHolePunched;
     RakPeerInterface rakPeer;
 
     public NATStatus mode = NATStatus.Uninitialized;
@@ -43,6 +43,10 @@ public class NATHelper : MonoBehaviour
         rakPeer = RakPeerInterface.GetInstance();
 
         StartCoroutine(connectToNATFacilitator());
+    }
+
+    public NATStatus GetMode() {
+        return mode;
     }
 
     /**
@@ -138,7 +142,7 @@ public class NATHelper : MonoBehaviour
     public void startListeningForPunchthrough(Action<int, string> onHolePunched)
     {
         mode = NATStatus.Listening;
-        this.onHolePunched = onHolePunched;
+        //this.onHolePunched = onHolePunched;
         rakPeer.SetMaximumIncomingConnections(2);
         StartCoroutine(waitForIncomingNATPunchThroughOnServer(onHolePunched));
     }
@@ -219,23 +223,39 @@ public class NATHelper : MonoBehaviour
      * Punch a hole form a client to the server identified by hostGUID
      * Once the hole is punched onHolePunched will be called with the ports to use to connect
      */
-    public void punchThroughToServer(string hostGUIDString, Action<int, int, string> onHolePunched)
-    {
+    public void punchThroughToServer(string hostGUIDString, 
+        float timeout,
+        Action<int, int, string, OutboundPunchContainer> onHolePunched, 
+        Action<OutboundPunchContainer> onPunchFail,
+        OutboundPunchContainer pc) {
+
         mode = NATStatus.Punching;
         RakNetGUID hostGUID = new RakNetGUID(ulong.Parse(hostGUIDString));
         natPunchthroughClient.OpenNAT(hostGUID, facilitatorSystemAddress);
-        StartCoroutine(waitForResponseFromServer(hostGUID, onHolePunched));
+        StartCoroutine(waitForResponseFromServer(hostGUID, timeout, onHolePunched, onPunchFail, pc));
     }
 
     /**
      * Wait for a NAT Punchthrough responses from the server. Once a hole is punched
      * RakNet is shutdown so the NetworkManager can connect via UNet
      */
-    IEnumerator waitForResponseFromServer(RakNetGUID hostGUID, Action<int, int, string> onHolePunched)
-    {
+    IEnumerator waitForResponseFromServer(RakNetGUID hostGUID, float timeout,
+        Action<int, int, string, OutboundPunchContainer> onHolePunched, 
+        Action<OutboundPunchContainer> onPunchFail,
+        OutboundPunchContainer pc) {
+
+        float startTime = Time.time;
+
         ushort natListenPort = 0, natConnectPort = 0;
         while (true)
         {
+            if(Time.time - startTime > timeout) {
+                //mode = NATStatus.Idle;
+                
+                onPunchFail(pc);
+                yield break;
+            }   
+                
             //Debug.Log("About to get packet");
             Packet packet = rakPeer.Receive();
             
@@ -268,19 +288,20 @@ public class NATHelper : MonoBehaviour
 
                         // Shut down RakNet
                         rakPeer.Shutdown(0);
+                        //rakPeer.CloseConnection(packet.guid, false);
                         //isReady = false;
                         // Hole is punched!
                         
-                        onHolePunched(natListenPort, natConnectPort, hostGUID.g.ToString());
+                        //mode = NATStatus.AfterPunching;
+                        onHolePunched(natListenPort, natConnectPort, hostGUID.g.ToString(), pc);
                         Debug.Log("WaitForResponseFromServer has finished performing callback.");
-                        //Debug.Log("WaitForResponseFromServer is reconnecting to facilitator.");
-                        
-
                         yield break; // Totally done
 
                     default:
-                        Debug.Log("RakNet Client received unexpected message type: " + ((DefaultMessageIDTypes)packet.data[0]).ToString());
-                        break;
+                        Debug.Log("RakNet Client received unexpected message type: " + ((DefaultMessageIDTypes)packet.data[0]).ToString()
+                            + "but we'll keep trying.");
+                        punchThroughToServer(hostGUID.ToString(), timeout - (Time.time - startTime), onHolePunched, onPunchFail, pc);
+                        yield break;
                 }
             }
             rakPeer.DeallocatePacket(packet);
@@ -288,37 +309,76 @@ public class NATHelper : MonoBehaviour
         }
     }
 
-    public void RebootNAT() {
-        isReady = false;
-        Debug.Log("<<< REBOOT NAT >>>");
-        StopAllCoroutines();
-        switch (mode) {
+    public void RebootNAT() { //Returns NAT to idle.
+        NATStatus previousMode = mode;
+        mode = NATStatus.Rebooting;
+        Debug.Log("<<< REBOOT NAT >>>, current status = " + mode);
+        Debug.Log("Previous mode " + previousMode);
+        
+        //return;
+        switch (previousMode) {
             case NATStatus.Uninitialized:
+            StopAllCoroutines();
+            if(rakPeer != null)
+                rakPeer.Shutdown(0);
             StartCoroutine(connectToNATFacilitator());
-            break;
+            return;
 
             case NATStatus.Idle: //already connected to facilitator, but nothing else is going on
-            return;
+            mode = previousMode;
             break;
 
-            case NATStatus.ConnectingToFacilitator:
-            rakPeer.Shutdown(0);
-            StartCoroutine(connectToNATFacilitator());
+            case NATStatus.ConnectingToFacilitator: //let it do its thing
+            mode = previousMode;
             break;
 
             case NATStatus.Listening:
+            StopAllCoroutines();
             rakPeer.Shutdown(0);
             StartCoroutine(connectToNATFacilitator());
-            break;
+            return;
 
             case NATStatus.Punching:
+            StopAllCoroutines();
             rakPeer.Shutdown(0);
             StartCoroutine(connectToNATFacilitator());
-            break;
+            return;
+
+            default:                //nuke this entire site from orbit
+            StopAllCoroutines();    //it's the only way to be sure
+            rakPeer.Shutdown(0);
+            StartCoroutine(connectToNATFacilitator());
+            return;
+
         }
+
+        //mode = previousMode; //restore previous status
+
         //rakPeer.Shutdown(0);
         //StartCoroutine(connectToNATFacilitator());
     }
+
+    public void RebootNAT(NATStatus newMode) {
+        if (mode == NATStatus.Punching && mode == newMode) {
+
+        }
+    }
+    
+    public void PrepNAT(NATStatus newMode) {
+        
+        Debug.Log("Prepping NAT for " + newMode);
+        Debug.Log("Previous mode " + mode);
+        
+
+        if(newMode == mode) {
+            return;
+        }
+        else {
+            RebootNAT();
+        }
+        
+    }
+    
     /*
     IEnumerator PurgeAndReconnect() {
         //rakPeer.CloseConnection(facilitatorSystemAddress, true);
