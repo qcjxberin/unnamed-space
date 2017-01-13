@@ -204,7 +204,7 @@ public class NATHelper : MonoBehaviour
                         // Hole is punched, UNet can start listening
                         //isReady = false;
                         onHolePunched(natListenPort, externalIP);
-                        Debug.Log("waitForIncomingNATPunchThroughOnServer is reconnecting to facilitator");
+                        //Debug.Log("waitForIncomingNATPunchThroughOnServer is reconnecting to facilitator");
                         // Reconnect to Facilitator for next punchthrough
                         //StartCoroutine(connectToNATFacilitator());
                         
@@ -223,24 +223,24 @@ public class NATHelper : MonoBehaviour
      * Punch a hole form a client to the server identified by hostGUID
      * Once the hole is punched onHolePunched will be called with the ports to use to connect
      */
-    public void punchThroughToServer(string hostGUIDString, 
+    public void punchThroughToServer(
         float timeout,
-        Action<int, int, string, OutboundPunchContainer> onHolePunched, 
+        Action<int, int, OutboundPunchContainer> onHolePunched, 
         Action<OutboundPunchContainer> onPunchFail,
         OutboundPunchContainer pc) {
 
         mode = NATStatus.Punching;
-        RakNetGUID hostGUID = new RakNetGUID(ulong.Parse(hostGUIDString));
+        RakNetGUID hostGUID = new RakNetGUID(ulong.Parse(pc.serverGUID));
         natPunchthroughClient.OpenNAT(hostGUID, facilitatorSystemAddress);
-        StartCoroutine(waitForResponseFromServer(hostGUID, timeout, onHolePunched, onPunchFail, pc));
+        StartCoroutine(waitForResponseFromServer(timeout, onHolePunched, onPunchFail, pc));
     }
 
     /**
      * Wait for a NAT Punchthrough responses from the server. Once a hole is punched
      * RakNet is shutdown so the NetworkManager can connect via UNet
      */
-    IEnumerator waitForResponseFromServer(RakNetGUID hostGUID, float timeout,
-        Action<int, int, string, OutboundPunchContainer> onHolePunched, 
+    IEnumerator waitForResponseFromServer(float timeout,
+        Action<int, int, OutboundPunchContainer> onHolePunched, 
         Action<OutboundPunchContainer> onPunchFail,
         OutboundPunchContainer pc) {
 
@@ -293,14 +293,14 @@ public class NATHelper : MonoBehaviour
                         // Hole is punched!
                         
                         //mode = NATStatus.AfterPunching;
-                        onHolePunched(natListenPort, natConnectPort, hostGUID.g.ToString(), pc);
+                        onHolePunched(natListenPort, natConnectPort, pc);
                         Debug.Log("WaitForResponseFromServer has finished performing callback.");
                         yield break; // Totally done
 
                     default:
                         Debug.Log("RakNet Client received unexpected message type: " + ((DefaultMessageIDTypes)packet.data[0]).ToString()
                             + "but we'll keep trying.");
-                        punchThroughToServer(hostGUID.ToString(), timeout - (Time.time - startTime), onHolePunched, onPunchFail, pc);
+                        punchThroughToServer(timeout - (Time.time - startTime), onHolePunched, onPunchFail, pc);
                         yield break;
                 }
             }
@@ -325,7 +325,7 @@ public class NATHelper : MonoBehaviour
             return;
 
             case NATStatus.Idle: //already connected to facilitator, but nothing else is going on
-            mode = previousMode;
+            mode = previousMode; //why did you even reboot?
             break;
 
             case NATStatus.ConnectingToFacilitator: //let it do its thing
@@ -358,11 +358,6 @@ public class NATHelper : MonoBehaviour
         //StartCoroutine(connectToNATFacilitator());
     }
 
-    public void RebootNAT(NATStatus newMode) {
-        if (mode == NATStatus.Punching && mode == newMode) {
-
-        }
-    }
     
     public void PrepNAT(NATStatus newMode) {
         

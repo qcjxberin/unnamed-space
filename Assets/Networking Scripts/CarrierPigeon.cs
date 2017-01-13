@@ -11,26 +11,26 @@ public class CarrierPigeon : NetworkManager {
     NetworkMatch networkMatch;
     FieldInfo clientIDField;
 
-    Action<string, string, string> joinGameCallback;
+    Action<List<Game>> joinGameCallback;
     
 	// Use this for initialization
 	void Awake () {
         networkMatch = gameObject.AddComponent<NetworkMatch>();
-
+        
         clientIDField = typeof(NetworkClient).GetField("m_ClientId", BindingFlags.NonPublic | BindingFlags.Instance);
         ready = true;
 	}
 	
-	public void HostGame(string guid, string externalIP) { //include info to advertise
-        string name = string.Join(":", new string[] { externalIP, Network.player.ipAddress, guid }); //Format the name of the match with the server information that clients will need
+	public void HostGame(string name, string password, string guid, string externalIP) { //include info to advertise
+        string encodedName = string.Join(":", new string[] { externalIP, Network.player.ipAddress, guid, name, password }); //Format the name of the match with the server information that clients will need
         Debug.Log("Creating Match");
-        networkMatch.CreateMatch(name, 2, true, "", externalIP, Network.player.ipAddress, 0, 0, OnMatchCreate);
-
+        networkMatch.CreateMatch(encodedName, 2, true, "", externalIP, Network.player.ipAddress, 0, 0, OnMatchCreate);
+        
     }
 
-    public void JoinGame(Action<string, string, string> callback) {
+    public void QueryGames(Action<List<Game>> callback) {
         joinGameCallback = callback;
-        networkMatch.ListMatches(0, 1, "", true, 0, 0, OnMatchList);
+        networkMatch.ListMatches(0, 4, "", true, 0, 0, OnMatchList);
     }
 
     public override void OnMatchCreate(bool success, string extendedInfo, MatchInfo matchInfo) {
@@ -49,12 +49,20 @@ public class CarrierPigeon : NetworkManager {
             return;
         }
         Debug.Log("Found match information.");
-        string[] data = matchList[0].name.Split(':');
-        string exIP = data[0];
-        string inIP = data[1];
-        string guid = data[2];
+        List<Game> games = new List<Game>();
+        foreach(MatchInfoSnapshot info in matchList) {
+            string[] data = info.name.Split(':');
+            string exIP = data[0];
+            string inIP = data[1];
+            string guid = data[2];
+            string name = data[3];
+            string pass = data[4];
+            games.Add(new Game(name, pass, guid, inIP, exIP));
+        }
+        //string[] data = matchList[0].name.Split(':');
+        
 
-        joinGameCallback(exIP, inIP, guid);
+        joinGameCallback(games);
     }
 
 

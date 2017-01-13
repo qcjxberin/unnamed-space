@@ -9,6 +9,7 @@ public class NetworkCoordinator : MonoBehaviour {
     ServerManager sm = new ServerManager();
     NATHelper nath;
     CarrierPigeon pigeon;
+    UIController serverUI;
     int punchCounter = 0;
     public Text debugText;
     List<OutboundPunchContainer> outboundPunches = new List<OutboundPunchContainer>();
@@ -18,11 +19,15 @@ public class NetworkCoordinator : MonoBehaviour {
     const float PUNCH_TIME_SPACING = 0.2f;
     float lastPunchTime = 0;
 
+    public CoordinatorStatus status = CoordinatorStatus.Uninitialized;
+
 	// Use this for initialization
 	void Start () {
         NetworkTransport.Init();
         nath = gameObject.GetComponent<NATHelper>();
         pigeon = gameObject.GetComponent<CarrierPigeon>();
+        serverUI = gameObject.GetComponent<UIController>();
+        status = CoordinatorStatus.Idle;
 	}
 
     void Update() {
@@ -42,12 +47,33 @@ public class NetworkCoordinator : MonoBehaviour {
     }
 	
 	public void CoordinatorHostGame() {
-        if(pigeon.ready && nath.isReady) {
-            pigeon.HostGame(nath.guid, nath.externalIP);
-        }
-        Debug.Log("Beginning to listen for incoming punches.");
-        StartCoroutine(WaitForPunches());
+        status = CoordinatorStatus.CreatingGame;
+        StartCoroutine(WaitUntilAbleToHost()); //this exists because UIButtons can't start coroutines
             
+    }
+
+    IEnumerator WaitUntilAbleToHost() {
+        float startTime = Time.time;
+        while(!(pigeon.ready && nath.mode == NATStatus.Idle)) {
+            if (Time.time - startTime > 8f) { //hardcoded timeouts are lame
+                Debug.Log("WaitUntilAbleToHost() timed out. Network components weren't ready in time.");
+                yield break;
+            }
+            if (nath.mode != NATStatus.Idle)
+                Debug.Log("WaitUntilAbleToHost is rebooting NAT.");
+                nath.RebootNAT();
+            yield return new WaitForEndOfFrame();
+        }
+        serverUI.SetUIMode(UIMode.AskForGameInfo);
+    }
+
+    //this gets called by the Publish button in the GameInfoContainer
+    public void PublishGameInfo(string gameName, string gamePassword) {
+        if(status != CoordinatorStatus.CreatingGame) {
+            Debug.Log("Something tried to publish a game when we weren't trying to do that.");
+            return;
+        }
+        pigeon.HostGame(gameName, gamePassword, nath.guid, nath.externalIP);
     }
 
     void onHolePunchedServer(int listenPort, string exIP) {
@@ -56,9 +82,42 @@ public class NetworkCoordinator : MonoBehaviour {
         StartCoroutine(WaitForPunches());
     }
 
+
+    //
+
+
+
     public void CoordinatorJoinGame() {
-        if (pigeon.ready && nath.isReady) {
-            pigeon.JoinGame(OnInfoAcquired); //Once the match is successfully joined, OnInfoAcquired is called with the pigeon's data
+        StartCoroutine(WaitUntilAbleToJoin());
+    }
+
+    public void RefreshGames() {
+        StartCoroutine(WaitUntilAbleToJoin());
+    }
+    IEnumerator WaitUntilAbleToJoin() {
+        float startTime = Time.time;
+        while (!(pigeon.ready && nath.mode == NATStatus.Idle)) {
+            if (Time.time - startTime > 8f) { //hardcoded timeouts are lame
+                Debug.Log("WaitUntilAbleToJoin() timed out. Network components weren't ready in time.");
+                yield break;
+            }
+            if (nath.mode != NATStatus.Idle)
+                Debug.Log("WaitUntilAbleToJoin is rebooting NAT.");
+                nath.RebootNAT();
+            yield return new WaitForEndOfFrame();
+        }
+        pigeon.QueryGames(DisplayGames);
+
+    }
+
+    void DisplayGames(List<Game> games) {
+        serverUI.SetUIMode(UIMode.DisplayGames);
+        serverUI.PopulateGames(games);
+    }
+
+    public void SelectGame(Game g) {
+        if(status != CoordinatorStatus.Joining) {
+            Debug.Log("Something tried to select a game when we weren't trying to do that.");
         }
     }
 
@@ -75,35 +134,28 @@ public class NetworkCoordinator : MonoBehaviour {
         outboundPunches.Insert(0, pc);
     }
 
-    void onHolePunchedClient(int listenPort, int connectPort, string serverGUID, OutboundPunchContainer pc) {
-        //return;
-        Debug.Log("Punched hole to server GUID " + serverGUID + ", about to make connection.");
-        
-        int portToConnectTo = connectPort;
-        string addressToConnectTo = "";
-        OutboundPunchContainer punchInfo = pc;
-        
-        if(punchInfo == null) {
+    void onHolePunchedClient(int listenPort, int connectPort, OutboundPunchContainer pc) {
+        if (pc == null) {
             Debug.Log("Punch information missing.");
             return;
         }
 
-        if(punchInfo.serverGUID != serverGUID) {
-            Debug.Log("OutboundPunchContainer data GUID does not match punched GUID.");
-            return;
-        }
-
-        if(punchInfo.serverExternalIP == nath.externalIP) { //We're on the same LAN
+        Debug.Log("Holepunch callback to server GUID " + pc.serverGUID + ", about to make connection.");
+        
+        int portToConnectTo = connectPort;
+        string addressToConnectTo = "";
+        
+        if(pc.serverExternalIP == nath.externalIP) { //We're on the same LAN
             Debug.Log("Target is on the same LAN!");
-            if(punchInfo.serverInternalIP == Network.player.ipAddress) { //We're on the same computer!
+            if(pc.serverInternalIP == Network.player.ipAddress) { //We're on the same computer!
                 Debug.Log("Target is on the same computer!");
                 addressToConnectTo = "127.0.0.1";
             } else {
-                addressToConnectTo = punchInfo.serverInternalIP; //Just stay inside the LAN.
+                addressToConnectTo = pc.serverInternalIP; //Just stay inside the LAN.
             }
         }
         else {
-            addressToConnectTo = punchInfo.serverExternalIP;
+            addressToConnectTo = pc.serverExternalIP;
         }
         //ServerManager.SpawnClient() creates an ordinary node and then connects it to the specified target.
         sm.SpawnServerThenConnect(listenPort, addressToConnectTo, connectPort);
@@ -122,7 +174,7 @@ public class NetworkCoordinator : MonoBehaviour {
             yield return new WaitForEndOfFrame();
         }
         Debug.Log("Punch() routine is about to punchThroughToServer()");
-        nath.punchThroughToServer(pc.serverGUID, 8f, onHolePunchedClient, onPunchFailClient, pc);
+        nath.punchThroughToServer(8f, onHolePunchedClient, onPunchFailClient, pc);
         yield break;
     }
 
