@@ -16,6 +16,7 @@ public class Server {
     int port;
     byte reliableChannel;
     byte unreliableChannel;
+    byte VOIPChannel;
     int socketID;
 
     List<PeerInfo> peers = new List<PeerInfo>();
@@ -41,9 +42,11 @@ public class Server {
         Debug.Log("Starting up host at port " + listenPort);
         NetworkTransport.Init();
         ConnectionConfig config = new ConnectionConfig();
-
+        
+        //config.PacketSize = 2000;
         reliableChannel = config.AddChannel(QosType.Reliable);
         unreliableChannel = config.AddChannel(QosType.Unreliable);
+        VOIPChannel = config.AddChannel(QosType.UnreliableSequenced);
         
         HostTopology topology = new HostTopology(config, 10);
 
@@ -87,13 +90,32 @@ public class Server {
         return true;
     }
 
-    public bool BroadcastAll(byte[] packet) {
-        Debug.Log("BroadcastAll");
+    public bool BroadcastAll(byte[] packet, QosType qos) {
+        byte channel;
+        switch (qos) {
+            case QosType.Reliable:
+            channel = reliableChannel;
+            break;
+
+            case QosType.Unreliable:
+            channel = unreliableChannel;
+            break;
+
+            case QosType.UnreliableSequenced:
+            channel = VOIPChannel;
+            break;
+
+            default:
+            channel = unreliableChannel;
+            break;
+        }
+
+        //Debug.Log("BroadcastAll");
         bool successflag = true;
         byte error;
         foreach(PeerInfo peer in peers) {
             byte err;
-            bool success = NetworkTransport.Send(socketID, peer.connectionId, unreliableChannel, packet, packet.Length, out err);
+            bool success = NetworkTransport.Send(socketID, peer.connectionId, channel, packet, packet.Length, out err);
             if (!success) {
                 successflag = false;
                 error = err;

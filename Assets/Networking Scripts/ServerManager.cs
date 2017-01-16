@@ -5,11 +5,13 @@ using System.Collections.Generic;
 using UnityEngine.Networking;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
+using Utilities;
 
 public class ServerManager {
 
     public string shout;
-    
+    public VoipReceiver voipReceiver;
+    public NetworkDatabase ndb;
     public List<Server> servers = new List<Server>();
 
     //Request to create a new server in the conglomeration of servers.
@@ -61,8 +63,8 @@ public class ServerManager {
         int recHostId;
         int connectionId;
         int channelId;
-        byte[] recBuffer = new byte[1024];
-        int bufferSize = 1024;
+        byte[] recBuffer = new byte[1400];
+        int bufferSize = 1400;
         int dataSize;
         byte error;
         NetworkEventType recData = NetworkTransport.Receive(out recHostId, out connectionId, out channelId, recBuffer, bufferSize, out dataSize, out error);
@@ -73,13 +75,12 @@ public class ServerManager {
 
             case NetworkEventType.ConnectEvent:    //2
             Debug.Log("Recieved ConnectEvent, registering peer");
+
             RegisterPeer(connectionId, recHostId);
-            
             break;
 
             case NetworkEventType.DataEvent:       //3
-            Debug.Log("Recieved DataEvent");
-            Debug.Log("Raw data: " + recBuffer.ToString());
+            recData = NetworkEventType.Nothing;
             ParseData(recBuffer);
             break;
 
@@ -107,52 +108,79 @@ public class ServerManager {
         }
     }
     void ParseData(byte[] data) {
-        if (data[0] == 2) { //shout
-            Debug.Log("Recieved a shout!");
-            byte[] newData = new byte[0];
-            data.CopyTo(newData, 1);
-            ParseAsShout(newData);
+        Debug.Log("Parsing " + data.Length + " bytes");
+        string preview = "";
+        for(int i = 0; i < 10; i++) {
+            preview += data[i];
         }
-        if (data[0] == 7) { //indicator
-            Debug.Log("Recieved an indicator ping!");
-            GameObject.FindObjectOfType<indicator>().Ping();
-        }
-    }
-    void ParseAsShout(byte[] data) {
-        Stream stream = new MemoryStream(data);
-        BinaryFormatter formatter = new BinaryFormatter();
-        string message = formatter.Deserialize(stream) as string;
-        shout = message;
-        Debug.Log("I got shouted at! " + message);
-    }
-
-
-    public void ShoutAtAllPeers() {
-        Debug.Log("Shouting at all clients.");
-        byte[] shout = new byte[50];
-        Stream stream = new MemoryStream(shout);
-        BinaryFormatter formatter = new BinaryFormatter();
-        formatter.Serialize(stream, "Hey you!");
-        byte[] packet = new byte[51];
-        packet[0] = 2;
-        shout.CopyTo(packet, 1);
-        foreach (Server s in servers) {
-            bool success = s.BroadcastAll(packet);
-            if (!success) {
-                Debug.Log("BroadcastAll couldn't broadcast properly.");
+        Debug.Log("Preview: " + preview);
+        if(data[0] == 1){ //Generic packet, we have to examine this
+            byte playerID = data[1];
+            Player source = ndb.LookupPlayer(playerID); //retrieve which player sent this packet
+            if(source == null) { //hmmm, the NBD can't find the player
+                Debug.Log("Player from which packet originated does not exist on local NDB.");
+                return;
             }
+
+            byte typeData = data[2]; //typeByte describes what kind of packet this is
+            switch (typeData) {
+                case 20: //VOIP packet
+                Debug.Log("Found an audio packet");
+                voipReceiver.ReceiveAudio(data);
+                break;
+
+                case 7: //network ping
+                GameObject.FindObjectOfType<indicator>().Ping();
+                break;
+
+                default:
+                Debug.Log("Unknown packet type, header " + typeData);
+                break;
+            }
+
+
+            
         }
     }
+    
+
+
+    
     public void PingAllPeers() {
         Debug.Log("Pinging all clients.");
+        PingPacket ping = new PingPacket();
+        Broadcast(ping);
+    }
+    
+    public void Broadcast(MeshPacket p) {
         
-        byte[] packet = new byte[1];
-        packet[0] = 7;
+        byte playerID = ndb.GetSelf().GetUniqueID();
+        //byte playerID = 0;
+        byte[] outboundData = new byte[1 + p.GetData().Length + 1];
+        outboundData[0] = 1; //normal 
+        outboundData[1] = playerID; //it's coming from us
+        p.GetData().CopyTo(outboundData, 2);
+        Debug.Log("Broadcasting " + outboundData.Length + "bytes");
         foreach (Server s in servers) {
-            bool success = s.BroadcastAll(packet);
-            if (!success) {
-                Debug.Log("PingAll couldn't broadcast properly.");
-            }
+            bool success = s.BroadcastAll(outboundData, p.GetQOS());
+            if (!success)
+                Debug.Log("Broadcast failed.");
         }
+    }
+
+}
+
+public class PingPacket : MeshPacket {
+    
+    public PingPacket() : base(new byte[1]) { //always feed packet constructor a one-byte array, this is a ping
+        
+    }
+
+    public override PacketType GetTypeByte() {
+        return PacketType.Ping;
+    }
+
+    public override QosType GetQOS() {
+        return QosType.Reliable;
     }
 }

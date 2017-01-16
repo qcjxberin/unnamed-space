@@ -9,6 +9,8 @@ public class ProviderUIInfo : MonoBehaviour {
     public NetworkCoordinator nc;
 
 	public void Publish() {
-        nc.PublishGameInfo(servername.text, password.text);
+        string parsedName = servername.text;
+        parsedName = parsedName.Replace(":", "$COLON");
+        nc.PublishGameInfo(parsedName, password.text);
     }
 }

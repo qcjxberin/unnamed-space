@@ -17,6 +17,6 @@ public class GameListing : MonoBehaviour {
     }
     
     public void UpdateLabel() {
-        label.text = thisGame.name;
+        label.text = thisGame.name.Replace("$COLON", ":");
     }
 }

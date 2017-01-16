@@ -10,6 +10,7 @@ public class NetworkCoordinator : MonoBehaviour {
     NATHelper nath;
     CarrierPigeon pigeon;
     UIController serverUI;
+    NetworkDatabase ndb;
     int punchCounter = 0;
     public Text debugText;
     List<OutboundPunchContainer> outboundPunches = new List<OutboundPunchContainer>();
@@ -27,11 +28,16 @@ public class NetworkCoordinator : MonoBehaviour {
         nath = gameObject.GetComponent<NATHelper>();
         pigeon = gameObject.GetComponent<CarrierPigeon>();
         serverUI = gameObject.GetComponent<UIController>();
+        serverUI.nc = this;
+        ndb = gameObject.GetComponent<NetworkDatabase>();
+        sm.ndb = ndb;
+        sm.voipReceiver = gameObject.GetComponent<VoipReceiver>();
         status = CoordinatorStatus.Idle;
 	}
 
     void Update() {
         sm.Receive();
+
         UpdateDebug();
         UpdateNATStatus();
         if (outboundPunches.Count > 0 && nath.mode == NATStatus.Idle) {
@@ -64,6 +70,7 @@ public class NetworkCoordinator : MonoBehaviour {
                 nath.RebootNAT();
             yield return new WaitForEndOfFrame();
         }
+        status = CoordinatorStatus.CreatingGame;
         serverUI.SetUIMode(UIMode.AskForGameInfo);
     }
 
@@ -73,7 +80,9 @@ public class NetworkCoordinator : MonoBehaviour {
             Debug.Log("Something tried to publish a game when we weren't trying to do that.");
             return;
         }
+        status = CoordinatorStatus.Hosting;
         pigeon.HostGame(gameName, gamePassword, nath.guid, nath.externalIP);
+        nath.startListeningForPunchthrough(onHolePunchedServer);
     }
 
     void onHolePunchedServer(int listenPort, string exIP) {
@@ -92,6 +101,10 @@ public class NetworkCoordinator : MonoBehaviour {
     }
 
     public void RefreshGames() {
+        if (status != CoordinatorStatus.Joining) {
+            Debug.Log("Something tried to refresh when we weren't trying to do that.");
+            return;
+        }
         StartCoroutine(WaitUntilAbleToJoin());
     }
     IEnumerator WaitUntilAbleToJoin() {
@@ -106,8 +119,9 @@ public class NetworkCoordinator : MonoBehaviour {
                 nath.RebootNAT();
             yield return new WaitForEndOfFrame();
         }
+        status = CoordinatorStatus.Joining;
         pigeon.QueryGames(DisplayGames);
-
+        
     }
 
     void DisplayGames(List<Game> games) {
@@ -115,12 +129,21 @@ public class NetworkCoordinator : MonoBehaviour {
         serverUI.PopulateGames(games);
     }
 
+    public void RefreshListings() {
+        
+        pigeon.QueryGames(DisplayGames);
+    }
+
     public void SelectGame(Game g) {
         if(status != CoordinatorStatus.Joining) {
             Debug.Log("Something tried to select a game when we weren't trying to do that.");
+            return;
         }
+        serverUI.SetUIMode(UIMode.Connecting);
+        QueuePunch(g.ConstructPunchContainer());
     }
-
+    /*
+    [Deprecated]
     public void OnInfoAcquired(string serverExternalIP, string serverInternalIP, string serverGUID) { //Carrier pigeon has delivered game owner's data. Punch through to game owner.
         Debug.Log("Acquired match info. Preparing to punch.");
         
@@ -129,6 +152,7 @@ public class NetworkCoordinator : MonoBehaviour {
         //RobustPunch(serverGUID, pc); //Punch() will punch to GUID when the NAT system is ready to do so.
         //PunchNow(serverGUID);
     }   
+    */
 
     void QueuePunch(OutboundPunchContainer pc) {
         outboundPunches.Insert(0, pc);
@@ -209,7 +233,9 @@ public class NetworkCoordinator : MonoBehaviour {
         NATStatusText.text = "NAT Status: " + nath.mode;
     }
 
-    
+    public void RoutePacketToServers(MeshPacket p) {
+        sm.Broadcast(p);
+    }
 }
 
 

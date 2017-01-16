@@ -46,6 +46,7 @@ public class CarrierPigeon : NetworkManager {
         }
         if(matchList.Count == 0) {
             Debug.Log("No matches found.");
+            joinGameCallback(new List<Game>());
             return;
         }
         Debug.Log("Found match information.");
