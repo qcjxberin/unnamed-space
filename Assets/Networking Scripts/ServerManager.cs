@@ -9,10 +9,24 @@ using Utilities;
 
 public class ServerManager {
 
+    /*
+        ServerManager.cs
+        Copyright 2017 Finn Sinclair
+
+        ServerManager is a container of many nodes and the main window into
+        the mesh network. All packets come and go through this script. It is
+        in charge of routing packets from various objects to the correct target
+        player, and routing packets from remote users to the correct local objects.
+        The NetworkDatabase uses the ServerManager to send and receive database
+        updates, and the NetworkCoordinator gives the ServerManager the information
+        to create the necessary hosts and peer connections.
+    */
+
     public string shout;
     public VoipReceiver voipReceiver;
     public NetworkDatabase ndb;
     public List<Server> servers = new List<Server>();
+    
 
     //Request to create a new server in the conglomeration of servers.
     //Probably originates from a NAT punchthrough. We should check if
@@ -108,12 +122,28 @@ public class ServerManager {
         }
     }
     void ParseData(byte[] data) {
-        Debug.Log("Parsing " + data.Length + " bytes");
-        string preview = "";
-        for(int i = 0; i < 10; i++) {
-            preview += data[i];
+
+        MeshPacket incomingPacket = new MeshPacket(data);
+
+        switch (incomingPacket.GetPacketType()) {
+            case PacketType.Generic:
+            Debug.Log("Received generic packet. Check your packet/serialization");
+            break;
+
+            case PacketType.VOIP:
+            ndb.ReceivePacket(incomingPacket);
+            break;
+
+            default:
+            Debug.Log("Unknown packet type.");
+            break;
         }
-        Debug.Log("Preview: " + preview);
+
+
+
+        
+
+        
         if(data[0] == 1){ //Generic packet, we have to examine this
             byte playerID = data[1];
             Player source = ndb.LookupPlayer(playerID); //retrieve which player sent this packet
@@ -126,7 +156,10 @@ public class ServerManager {
             switch (typeData) {
                 case 20: //VOIP packet
                 Debug.Log("Found an audio packet");
-                voipReceiver.ReceiveAudio(data);
+                byte[] trimmed = new byte[data.Length - 3];
+                Buffer.BlockCopy(data, 2, trimmed, 0, trimmed.Length);
+                
+                voipReceiver.ReceiveAudio(p);
                 break;
 
                 case 7: //network ping
@@ -166,6 +199,10 @@ public class ServerManager {
             if (!success)
                 Debug.Log("Broadcast failed.");
         }
+    }
+
+    public bool SendPacket(MeshPacket p, byte targetPlayer) {
+        return false;
     }
 
 }

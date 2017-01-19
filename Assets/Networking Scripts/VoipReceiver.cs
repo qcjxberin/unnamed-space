@@ -3,124 +3,103 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 using Utilities;
-using NAudio;
-using System.IO;
-using System.IO;
 
-public class VoipReceiver : MonoBehaviour {
-    public float rangeReduction;
-    public float multiplier;
-    AudioSource debugAudio;
-    int FREQUENCY;
-    public int transmitFreq;
-    string DEVICE;
-    AudioClip lastClip;
-    float lastSampleTime = 0;
-    int lastSamplePosition = 0;
-    public bool isTransmitting = false;
+public class VoipReceiver : MonoBehaviour, IReceivesPacket<MeshPacket> {
 
-    public short loudestSampleSoFar = 500;
-    public float gain = 1;
+    public float volume;
 
-    
+    int TRANSMIT_FREQUENCY = 12000;
 
-    float statsBegin = 0;
-    float statsEnd;
-    
+    float bufferSeparation = 100;
+
+    //Destination clip length. 
+    int receivingBufferLength = 30000;
+
+    //On-object audio source
+    AudioSource audioSource;
     int writtenSamples = 0;
-    public struct ByteTuple {
-        public byte byte1;
-        public byte byte2;
-    }
+
 
     void Start() {
-        debugAudio = gameObject.GetComponent<AudioSource>();        
+        audioSource = gameObject.GetComponent<AudioSource>();
+        StartReceiving();
     }
 
-    public void ReceiveAudio(byte[] data) {
-        //Debug.Log("Voip recieved " + (data.Length - 3) + " samples of audio");
-        byte[] trimmedData = new byte[data.Length - 3];
+    // Update is called once per frame
+    void Update() {
+        PacketLossCompensate();
+    }
+    
+    public void StartReceiving() {
+        writtenSamples = 0;
+        //audioSource.timeSamples = 0;
+        audioSource.clip = null;
+    }
 
-        Buffer.BlockCopy(data, 3, trimmedData, 0, trimmedData.Length); //move received data to trimmed array, excluding first three bytes
+    
 
-        //AudioClip incomingClip;
+    //Making sure the playhead is a suitable distance away from the incoming packets in bufferspace
+    //This is useful not only when there is packet loss, but also when there is fluctuating network speed
+    public void PacketLossCompensate() {
+        bufferSeparation +=(100 - bufferSeparation) * 0.1f;
+        if (audioSource.timeSamples > (writtenSamples % receivingBufferLength) - bufferSeparation && Mathf.Abs(audioSource.timeSamples - (writtenSamples % receivingBufferLength)) < receivingBufferLength * 0.8f) {
+            bufferSeparation += 200;
+            Debug.Log("Pausing");
+            audioSource.Pause();
+        }
+        else {
+            if (audioSource.isPlaying == false) {
+                Debug.Log("Restarting");
+                audioSource.Play();
+                audioSource.loop = true;
+            }
+
+        }
+    }
+
+    public void ReceivePacket(MeshPacket p) { //called, containing incoming packet
+
+        if(p.GetPacketType() != PacketType.VOIP) {
+            Debug.LogError("PACKET TYPE MISMATCH");
+            return;
+        }
+        byte[] data = new byte[p.GetData().Length];
+
+
+        Debug.Log("Voip recieved " + data.Length + " samples of audio");
+      
 
 
         List<float> decompressedData = new List<float>();
-        for (int i = 0; i < trimmedData.Length; i++) {
-            short s = NAudio.Codecs.MuLawDecoder.MuLawToLinearSample(trimmedData[i]);
-
-            decompressedData.Add(((float)s) / (((float)short.MaxValue) * rangeReduction));
-            //Debug.Log(s);
+        for (int i = 0; i < data.Length; i++) {
+            short s = NAudio.Codecs.MuLawDecoder.MuLawToLinearSample(data[i]);
+            decompressedData.Add((s / ((float)short.MaxValue)) * volume);
         }
-        if (debugAudio.clip == null) {
-            debugAudio.clip = AudioClip.Create("clip", 25000, 1, transmitFreq, false);
+        //initialize input
+        if (audioSource.clip == null) {
+            Debug.Log("Creating Audio Clip");
+            audioSource.clip = AudioClip.Create("clip", receivingBufferLength, 1, TRANSMIT_FREQUENCY, false);
         }
-        //decompressedData.InsertRange(decompressedData.Count, new float[25000 - decompressedData.Count]);
-        //Debug.Log(writtenSamples);
-        debugAudio.clip.SetData(decompressedData.ToArray(), writtenSamples % 25000);
+        float[] floatData = decompressedData.ToArray();
+        audioSource.clip.SetData(floatData, writtenSamples % receivingBufferLength);
+        
+        //Prevent writtenSamples from overflowing int.MAXVALUE after a long time.
+        
         writtenSamples += decompressedData.Count;
-
-
-
-
-
-
-        //AudioClip incomingClip = new AudioClip();
-        //incomingClip.SetData(decompressedData, 0);
-        if (debugAudio.isPlaying != true) {
-            Debug.Log("starting audio");
-            //debugAudio.PlayDelayed(2);
-            debugAudio.Play();
-            debugAudio.loop = true;
+        if (writtenSamples > receivingBufferLength * 4) {
+            writtenSamples -= receivingBufferLength * 3;
         }
-
-        //Debug.Log(incomingClip.name);
-        //debugAudio.Play(0);
-        //Debug.Log(debugAudio.name)
-    }
-
-    private float[] DownsampleNaive(float[] inBuffer, int inputSampleRate, int outputSampleRate) {
-        List<float> outBuffer = new List<float>();
-        double ratio = (double)inputSampleRate / outputSampleRate;
-        int sampleGroup = Mathf.RoundToInt((float)ratio);
-        int outSample = 0;
-        int inSample = 0;
-        while (inSample < inBuffer.Length) {
-            float[] range = new float[sampleGroup];
-            float sum = 0;
-            for (int i = 0; i < sampleGroup; i++) {
-                sum += inBuffer[i + inSample];
-            }
-            outBuffer.Add(sum / sampleGroup);
-            inSample += sampleGroup;
-        }
-        return outBuffer.ToArray();
-    }
-    /*
-    float Decompress(byte b1, byte b2) {
-        byte[] bytes = new byte[2];
-        bytes[0] = b1;
-        bytes[1] = b2;
-        ushort s = BitConverter.ToUInt16(bytes, 0);
-        float f = ((((float)s) / (((float)ushort.MaxValue)/rangeReduction)) * 2.0f) - 1.0f;
-        return f;
     }
     
-    byte Compress(float input) {
-        byte compressed = (byte)(((input + 1) / 2) * 256);
-        return compressed;
-    }
-    */
     byte[] Compress16(float input) {
+        //return BitConverter.GetBytes(input);
         return BitConverter.GetBytes(halve(input));
     }
 
     short halve(float input) { //signed float input
-        short i = (short)(input * (((float)short.MaxValue) * rangeReduction));
-        return i;
+        short i = (short)(input * (((float)short.MaxValue)));
+        return i; //signed short output
     }
-
     
 
 

@@ -4,31 +4,60 @@ using UnityEngine;
 using System;
 using Utilities;
 using NAudio;
+using NAudio.Wave.SampleProviders;
+using NAudio.Wave;
 using System.IO;
+using UnityEditor.Audio;
 
 public class VOIPTEST : MonoBehaviour {
-    public float rangeReduction;
-    public float multiplier;
-    AudioSource debugAudio;
-    int FREQUENCY;
-    public int transmitFreq;
+    public VoipReceiver VoipReceive;
+
+
+    public float volume;
+
+    //Too high or too low WILL cause issues. ACM stream buffer can easily overflow, only performing one ACM pass.
+    float interval = 0.05f;
+
+    //Doesn't seem to slow things down considerably.
+    float lowPassQuality = 1;
+
+    //Should we cutoff audio when not talking? This may cause "popping" on the receiving end.
+    public bool useSilenceCutoff = true;
+    public float silenceCutoff = 0.01f;
+    float runningAvgCutoff = 0;
+    
+    
+    //These 
+    int SOURCE_FREQUENCY;
+    int TRANSMIT_FREQUENCY = 12000;
     string DEVICE;
+
     AudioClip lastClip;
     float lastSampleTime = 0;
     int lastSamplePosition = 0;
     public bool isTransmitting = false;
 
-    public short loudestSampleSoFar = 500;
-    public float gain = 1;
+    
+    
 
+    //DSP pre-downsample filters
+    NAudio.Dsp.BiQuadFilter lowPassFilter;
+    NAudio.Dsp.BiQuadFilter lowShelfFilter;
 
     float statsBegin = 0;
     float statsEnd;
 
+    
+    //ACM stream converters
     NAudio.Wave.Compression.AcmStream downsampler;
     NAudio.Wave.Compression.AcmStream bitreduce;
-    // Use this for initialization
+    
 
+    //Destination clip length. 
+    int receivingBufferLength = 20000;
+
+    //On-object audio source
+    AudioSource audioSource;
     int writtenSamples = 0;
     
     
@@ -38,133 +67,191 @@ public class VOIPTEST : MonoBehaviour {
         //Debug.Log(test[0] + " " + test[1]);
         //Debug.Log(Convert.ToString(test[0], 2));
         //Debug.Log(Convert.ToString(test[1], 2));
-
-        debugAudio = gameObject.GetComponent<AudioSource>();
+        VoipReceive = gameObject.GetComponent<VoipReceiver>();
+        audioSource = gameObject.GetComponent<AudioSource>();
+        
         //downsampler = new NAudio.Wave.Compression.AcmStream(new NAudio.Wave.WaveFormat(), new NAudio.Wave.WaveFormat(8000, 16, 1));
         //StartTransmitting();
     }
 
     // Update is called once per frame
     void Update() {
-        loudestSampleSoFar += (short)(((500 - Mathf.Abs(loudestSampleSoFar)) * 0.01f) * Mathf.Sign(loudestSampleSoFar));
-        if (Time.time - lastSampleTime >= 0.1f && isTransmitting) {
-            statsBegin = Time.time;
+        //PacketLossCompensate();
+        
+        if (Time.time - lastSampleTime > interval && isTransmitting) {
             
+            statsBegin = Time.time;
             lastSampleTime = Time.time;
             int newPos = Microphone.GetPosition(DEVICE);
 
-            //Debug.Log("NewPos " + newPos);
-            float[] data = new float[Mathf.Abs(newPos - lastSamplePosition)];
+            if(newPos == 0 && lastSamplePosition == 0) {
+                Debug.Log("Skipping");
+                return;
+            }
+            if (newPos == lastSamplePosition) {
+                Debug.Log("Skipping");
+                return;
+            }
+            
+            float[] data = new float[Mathf.Abs(newPos - lastSamplePosition)]; //holding array for 32-bit float data
+            
+            //Retrieve appropriate microphone data into float array
 
             if (newPos <= lastSamplePosition) {
-                
-                float[] end = new float[lastClip.samples - lastSamplePosition];
-                lastClip.GetData(end, lastSamplePosition);
-                float[] wraparound = new float[newPos];
-                lastClip.GetData(wraparound, 0);
-                data = new float[end.Length + wraparound.Length];
-                Buffer.BlockCopy(end, 0, data, 0, end.Length);
-                Buffer.BlockCopy(wraparound, 0, data, end.Length, wraparound.Length);
+                int wrappedSampleLength = (lastClip.samples - lastSamplePosition) + newPos;
+                data = new float[wrappedSampleLength];
+                lastClip.GetData(data, lastSamplePosition);
             }
             else {
                 lastClip.GetData(data, lastSamplePosition);
             }
+            
+            //Low pass filter, excluding frequencies unsuitable for lower transmission sample rate
 
-
-
-            //Debug.Log("Polling sample " + (lastSamplePosition + 1) + " of " + lastClip.samples + ", adding " + data.Length + " samples.");
-
+            float[] filterOutput = new float[data.Length];
+            float avg = 0;
+            for(int i = 0; i < data.Length; i++) {
+                filterOutput[i] = lowPassFilter.Transform(data[i]);
+                avg += Mathf.Abs(filterOutput[i]);
+            }
+            avg /= filterOutput.Length;
+            if(avg > runningAvgCutoff) {
+                runningAvgCutoff += (avg - runningAvgCutoff) * 0.9f;
+            }
+            else {
+                runningAvgCutoff += (avg - runningAvgCutoff) * 0.05f;
+            }
             
 
+            //Saves data when not talking. silenceCutoff is user-configurable, as well as useSilenceCutoff
+            
+            if(runningAvgCutoff < silenceCutoff && useSilenceCutoff) {
+                lastSamplePosition = newPos;
+                return;
+            }
+            
+
+            //Converts float data into 16 bit PCM
 
             List<byte> expanded = new List<byte>();
-            for (int i = 0; i < data.Length; i++) {
-                
-                expanded.AddRange(Compress16(data[i]));
-
+            for (int i = 0; i < filterOutput.Length; i++) {
+                expanded.AddRange(Compress16(filterOutput[i]));
             }
             byte[] expandedArray = expanded.ToArray();
-            
-            //Debug.Log(preview);
-            //byte[] byteStream;
-            
+
+
+
+            //Downsample using ACM bytestream encoder
+
             Buffer.BlockCopy(expandedArray, 0, downsampler.SourceBuffer, 0, expandedArray.Length);
             int srcBytesConverted = 0;
             int convertedByteCount = downsampler.Convert(expandedArray.Length, out srcBytesConverted);
             byte[] converted = new byte[convertedByteCount];
             Buffer.BlockCopy(downsampler.DestBuffer, 0, converted, 0, convertedByteCount);
-            /*
-            Buffer.BlockCopy(converted, 0, bitreduce.SourceBuffer, 0, converted.Length);
-            int srcBytesCrunched = 0;
-            int crunchedByteCount = downsampler.Convert(converted.Length, out srcBytesCrunched);
-            byte[] crunched = new byte[crunchedByteCount];
-            Buffer.BlockCopy(bitreduce.DestBuffer, 0, crunched, 0, crunchedByteCount);
-            */
             
+            
+            //Apply mu-law voice codec compression, converts from 16-bit (two byte) to 8-bit (one byte) audio
 
-            List<byte> compressedData = new List<byte>(); //temporary
-            
-            
+            List<byte> compressedData = new List<byte>();
             for (int i = 0; i < converted.Length; i+=2) {
                 byte[] bytes = new byte[2];
                 bytes[0] = converted[i];
                 bytes[1] = converted[i+1];
                 short s = BitConverter.ToInt16(bytes, 0);
-                
-                if (Mathf.Abs(s) > Mathf.Abs(loudestSampleSoFar)) {
-                    loudestSampleSoFar = s;
-
-                }
-                gain = (float)short.MaxValue / (float)Mathf.Abs(loudestSampleSoFar);
-                s *= (short)(gain * multiplier);
-                
                 compressedData.Add(NAudio.Codecs.MuLawEncoder.LinearToMuLawSample(s));
-                //Debug.Log("MuLaw " + NAudio.Codecs.MuLawEncoder.LinearToMuLawSample(s));
             }
-            
-            lastSamplePosition = newPos;
+
+            //Constructs simulated packet if performing testing
 
             byte[] simupacket = new byte[compressedData.Count + 3];
             compressedData.CopyTo(simupacket, 3);
-            //Debug.Log("Transmit took " + (Time.time - statsBegin) / 1000 + "ms");
-            ReceiveAudio(simupacket);
+
+            lastSamplePosition = newPos;
+
+            Debug.Log("Transmit took " + (Time.time - statsBegin) / 1000.0f + "ms");
+            if (Input.GetKey(KeyCode.C)) {
+                return;
+            }
+            
+            VoipReceive.ReceiveAudio(simupacket);
         }
     }
 
     public void StartTransmitting() { //trigger this with keystroke, VR input, UI button, etc
+        if (isTransmitting)
+            return;
         Debug.Log("Voip Test Transmit");
         Debug.Log("Beginning VOIP transmit");
         lastSamplePosition = 0;
         lastSampleTime = 0;
-        loudestSampleSoFar = 500;
-
+        
+        
         int maxFreq = 0;
         int minFreq = 0;
         string deviceName = Microphone.devices[0];
         Microphone.GetDeviceCaps(deviceName, out minFreq, out maxFreq);
 
-        FREQUENCY = minFreq;
-        //FREQUENCY = 8000;
+        SOURCE_FREQUENCY = minFreq;
+        //SOURCE_FREQUENCY = 8000;
         DEVICE = deviceName;
-        lastClip = Microphone.Start(deviceName, true, 20, FREQUENCY);
+        lastClip = Microphone.Start(deviceName, true, 60, SOURCE_FREQUENCY);
         
-        downsampler = new NAudio.Wave.Compression.AcmStream(new NAudio.Wave.WaveFormat(FREQUENCY, 16, 1), new NAudio.Wave.WaveFormat(transmitFreq, 16, 1));
-        bitreduce = new NAudio.Wave.Compression.AcmStream(new NAudio.Wave.WaveFormat(transmitFreq, 16, 1), new NAudio.Wave.WaveFormat(transmitFreq, 8, 1));
+        
+        downsampler = new NAudio.Wave.Compression.AcmStream(new NAudio.Wave.WaveFormat(SOURCE_FREQUENCY, 16, 1), new NAudio.Wave.WaveFormat(TRANSMIT_FREQUENCY, 16, 1));
+        bitreduce = new NAudio.Wave.Compression.AcmStream(new NAudio.Wave.WaveFormat(TRANSMIT_FREQUENCY, 16, 1), new NAudio.Wave.WaveFormat(TRANSMIT_FREQUENCY, 8, 1));
+        lowPassFilter = NAudio.Dsp.BiQuadFilter.LowPassFilter(SOURCE_FREQUENCY, TRANSMIT_FREQUENCY*0.5f, lowPassQuality);
+
+        
+
         Debug.Log("Channels: " + lastClip.channels);
         Debug.Log("Bitconvert is little endian? " + BitConverter.IsLittleEndian);
         isTransmitting = true;
+        
     }
 
+    
     public void StopTransmitting() {
         isTransmitting = false;
         Microphone.End(DEVICE);
         downsampler.Dispose();
+        bitreduce.Dispose();      
         lastClip = null;
     }
+    /*
+    public void StartReceiving() {
+        writtenSamples = 0;
+        //audioSource.timeSamples = 0;
+        audioSource.clip = null;
+    }
+    */
+    public void ToggleTransmitting() {
+        if (isTransmitting) {
+            StopTransmitting();
+        }
+        else {
+            StartTransmitting();
+        }
+    }
 
-    public void ReceiveAudio(byte[] data) {
+    //Making sure the playhead is a suitable distance away from the incoming packets in bufferspace
+    //This is useful not only when there is packet loss, but also when there is fluctuating network speed
+    public void PacketLossCompensate() { 
+        if (audioSource.timeSamples > (writtenSamples % receivingBufferLength) - 100 && Mathf.Abs(audioSource.timeSamples - (writtenSamples % receivingBufferLength)) < receivingBufferLength * 0.8f) {
+            
+            audioSource.Pause();
+        }
+        else {
+            if (audioSource.isPlaying == false) {
+                audioSource.Play();
+                audioSource.loop = true;
+            }
+                
+        }
+    }
+
+    public void ReceiveAudio(byte[] data) { //called, containing incoming packet
         
-        //Debug.Log("Voip recieved " + (data.Length - 3) + " samples of audio");
+        Debug.Log("Voip recieved " + (data.Length - 3) + " samples of audio");
         byte[] trimmedData = new byte[data.Length - 3];
 
         Buffer.BlockCopy(data, 3, trimmedData, 0, trimmedData.Length); //move received data to trimmed array, excluding first three bytes
@@ -175,80 +262,52 @@ public class VOIPTEST : MonoBehaviour {
         List<float> decompressedData = new List<float>();
         for (int i = 0; i < trimmedData.Length; i++) {
             short s = NAudio.Codecs.MuLawDecoder.MuLawToLinearSample(trimmedData[i]);
+
+            decompressedData.Add((s / ((float)short.MaxValue)) * volume);
             
-            decompressedData.Add(((float)s) / (((float)short.MaxValue)*rangeReduction));
+            //decompressedData.Add(((float)(trimmedData[i] / byte.MaxValue) * 2.0f) - 1.0f);
             //Debug.Log(s);
         }
-        if(debugAudio.clip == null) {
-            debugAudio.clip = AudioClip.Create("clip", 25000, 1, transmitFreq, false);
+        if(audioSource.clip == null) {
+            audioSource.clip = AudioClip.Create("clip", receivingBufferLength, 1, TRANSMIT_FREQUENCY, false);
         }
+        
+        //Debug.Log("incoming data: " + trimmedData.Length + " mulaw data: " + decompressedData.Count);
+
         //decompressedData.InsertRange(decompressedData.Count, new float[25000 - decompressedData.Count]);
         //Debug.Log(writtenSamples);
-        debugAudio.clip.SetData(decompressedData.ToArray(), writtenSamples%25000);
+        float[] floatData = decompressedData.ToArray();
+
+
+
+
+        
+
+        
+
+        audioSource.clip.SetData(floatData, writtenSamples%receivingBufferLength);
+
+
+        //Debug.Log("Writing audio at " + writtenSamples % receivingBufferLength + " of " + receivingBufferLength + " samples");
+        
         writtenSamples += decompressedData.Count;
-
-
-
-
-
-
-        //AudioClip incomingClip = new AudioClip();
-        //incomingClip.SetData(decompressedData, 0);
-        if(debugAudio.isPlaying != true) {
-            Debug.Log("starting audio");
-
-            debugAudio.Play();
-            debugAudio.loop = true;
+        if (writtenSamples > receivingBufferLength * 4) {
+            writtenSamples -= receivingBufferLength * 3;
         }
-            
-        //Debug.Log(incomingClip.name);
-        //debugAudio.Play(0);
-        //Debug.Log(debugAudio.name)
+        
     }
-    /*
-    private float[] DownsampleNaive(float[] inBuffer, int inputSampleRate, int outputSampleRate) {
-        List<float> outBuffer = new List<float>();
-        double ratio = (double)inputSampleRate / outputSampleRate;
-        int sampleGroup = Mathf.RoundToInt((float)ratio);
-        int outSample = 0;
-        int inSample = 0;
-        while (inSample < inBuffer.Length) {
-            float[] range = new float[sampleGroup];
-            float sum = 0;
-            for(int i = 0; i < sampleGroup; i++) {
-                sum += inBuffer[i + inSample];
-            }
-            outBuffer.Add(sum / sampleGroup);
-            inSample += sampleGroup;
-        }
-        return outBuffer.ToArray();
-    }
-    */
-    /*
-    float Decompress(byte b1, byte b2) {
-        byte[] bytes = new byte[2];
-        bytes[0] = b1;
-        bytes[1] = b2;
-        ushort s = BitConverter.ToUInt16(bytes, 0);
-        float f = ((((float)s) / (((float)ushort.MaxValue)/rangeReduction)) * 2.0f) - 1.0f;
-        return f;
-    }
-    
-    byte Compress(float input) {
-        byte compressed = (byte)(((input + 1) / 2) * 256);
-        return compressed;
-    }
-    */
     byte[] Compress16(float input) {
+        //return BitConverter.GetBytes(input);
         return BitConverter.GetBytes(halve(input));
     }
 
     short halve(float input) { //signed float input
-        short i = (short)(input * (((float)short.MaxValue) * rangeReduction));
-        return i;
+        short i = (short)(input * (((float)short.MaxValue)));
+        return i; //signed short output
     }
 
     public void OnApplicationExit() {
+        Microphone.End(DEVICE);
         downsampler.Dispose();
         bitreduce.Dispose();
     }
