@@ -218,7 +218,7 @@ namespace Utilities {
             targetObjectId = i;
         }
 
-        public byte[] GetBytes() {
+        public byte[] GetSerializedBytes() {
             List<byte> output = new List<byte>();
 
             output.Add((byte)type);
@@ -231,7 +231,118 @@ namespace Utilities {
             return output.ToArray();
         }
 
+        public static DatabaseUpdate ParseContentAsDatabaseUpdate(byte[] serializedData) {
+            Dictionary<byte, Player> playerList = new Dictionary<byte, Player>();
+            Dictionary<ushort, MeshNetworkIdentity> networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
+            byte playerIDUpdate;
+            
 
+
+            byte[] rawData = serializedData;
+            byte numOfNewPlayers = rawData[0];
+            int pointer = 1;
+            byte i = 0;
+            while (i < numOfNewPlayers) {
+                int blobLength = rawData[pointer];
+
+                pointer++; //pointer is now at the beginning of the player data blob
+
+                byte[] playerData = new byte[blobLength];
+                Buffer.BlockCopy(rawData, pointer, playerData, 0, blobLength);
+                Player p = Player.DeserializeFull(playerData);
+                playerList.Add(p.GetUniqueID(), p);
+
+                pointer += blobLength; //pointer now at the byte after the player data blob
+                i++;
+            }
+            byte numOfObjects = rawData[pointer];
+            pointer++; //pointer now at the beginning of the first MeshNetworkIdentity data
+            byte j = 0;
+            while (j < numOfObjects) {
+                MeshNetworkIdentity netid = new MeshNetworkIdentity();
+                byte[] trimmed = new byte[MeshNetworkIdentity.NETWORK_IDENTITY_BYTE_SIZE];
+                Buffer.BlockCopy(rawData, pointer, trimmed, 0, trimmed.Length);
+                netid.DeserializeAndApply(trimmed);
+                networkObjects.Add(netid.GetObjectID(), netid);
+                pointer += MeshNetworkIdentity.NETWORK_IDENTITY_BYTE_SIZE; //pointer now at the byte after
+                j++;
+            }
+            playerIDUpdate = rawData[pointer];
+        }
+    }
+
+
+    
+    public class DatabaseUpdate {
+
+        //includes inherited information from MeshPacket
+        //These dictionaries are treated as deltas (why send the entire database?)
+        private Dictionary<byte, Player> playerList = new Dictionary<byte, Player>();
+        private Dictionary<ushort, MeshNetworkIdentity> networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
+        private Dictionary<byte, ushort> voipEndpoints;
+        byte playerIDUpdate;
+
+        public DatabaseUpdate(Dictionary<byte, Player> players,
+            Dictionary<ushort, MeshNetworkIdentity> objects,
+            byte newID) {
+            
+
+        }
+        
+
+        public void DeserializeAndApply(byte[] serializedData) {
+            byte[] rawData = serializedData;
+            byte numOfNewPlayers = rawData[0];
+            int pointer = 1;
+            byte i = 0;
+            while (i < numOfNewPlayers) {
+                int blobLength = rawData[pointer];
+
+                pointer++; //pointer is now at the beginning of the player data blob
+
+                byte[] playerData = new byte[blobLength];
+                Buffer.BlockCopy(rawData, pointer, playerData, 0, blobLength);
+                Player p = Player.DeserializeFull(playerData);
+                playerList.Add(p.GetUniqueID(), p);
+
+                pointer += blobLength; //pointer now at the byte after the player data blob
+                i++;
+            }
+            byte numOfObjects = rawData[pointer];
+            pointer++; //pointer now at the beginning of the first MeshNetworkIdentity data
+            byte j = 0;
+            while (j < numOfObjects) {
+                MeshNetworkIdentity netid = new MeshNetworkIdentity();
+                byte[] trimmed = new byte[MeshNetworkIdentity.NETWORK_IDENTITY_BYTE_SIZE];
+                Buffer.BlockCopy(rawData, pointer, trimmed, 0, trimmed.Length);
+                netid.DeserializeAndApply(trimmed);
+                networkObjects.Add(netid.GetObjectID(), netid);
+                pointer += MeshNetworkIdentity.NETWORK_IDENTITY_BYTE_SIZE; //pointer now at the byte after
+                j++;
+            }
+            playerIDUpdate = rawData[pointer];
+        }
+
+        public byte[] GetSerializedBytes() {
+            List<byte> output = new List<byte>();
+            output.Add((byte)playerList.Keys.Count);
+
+            int numPlayers = playerList.Keys.Count;
+            foreach(byte playerID in playerList.Keys) {
+                byte[] serializedPlayer = playerList[playerID].SerializeFull();
+                output.Add((byte)serializedPlayer.Length);
+                output.AddRange(serializedPlayer);
+            }
+            int numObjects = networkObjects.Keys.Count;
+            foreach(ushort objectID in networkObjects.Keys) {
+                byte[] serializedObject = networkObjects[objectID].GetSerializedBytes();
+                output.AddRange(serializedObject);
+            }
+            output.Add(playerIDUpdate);
+            return output.ToArray();
+        }
+
+        
     }
 
 
@@ -263,12 +374,13 @@ namespace Utilities {
             providerInternalIP = inIPIn;
             providerExternalIP = exIPIn;
         }
-
-
     }
 
     public interface IReceivesPacket<MeshPacket> {
         void ReceivePacket(MeshPacket p);
+    }
+    public interface IMeshSerializable {
+        byte[] GetSerializedBytes();
     }
 
 

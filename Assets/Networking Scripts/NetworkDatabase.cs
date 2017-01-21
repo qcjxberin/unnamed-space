@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Utilities;
 
-public class NetworkDatabase : MonoBehaviour {
+public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket> {
 
     /*
         NetworkDatabase is a collection of information that is a summary of the server-authoritative game state.
@@ -16,16 +16,16 @@ public class NetworkDatabase : MonoBehaviour {
         0 = undefined object
         1 = NetworkDatabase object
         
+        playerList: hashtable between playerID and Player object
+        networkObjects: hashtable between objectID and MeshNetworkIdentity component
 
     */
 
 
-    Player[] playerList = new Player[128];
+
     byte myId = 0; //uniqueID of zero indicates nonexistant player
-
+    private Dictionary<byte, Player> playerList = new Dictionary<byte, Player>();
     private Dictionary<ushort, MeshNetworkIdentity> networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
-
-    private Dictionary<Player, ushort> voipEndpoints;
 
 	// Use this for initialization
 	void Start () {
@@ -48,16 +48,11 @@ public class NetworkDatabase : MonoBehaviour {
     public MeshNetworkIdentity RetrieveObject(ushort id) {
         return networkObjects[id];
     }
-    public ushort GetVOIPEndpoint(Player p) {
-        return voipEndpoints[p];
-    }
 
     public int CalculateDatabaseHash() {
         return networkObjects.GetHashCode();
     }
-    public int CalculateVoipHash() {
-        return voipEndpoints.GetHashCode();
-    }
+    
     public int CalculatePlayerHash() {
         return playerList.GetHashCode();
     }
@@ -69,5 +64,12 @@ public class NetworkDatabase : MonoBehaviour {
         p.SetSourceObjectId((ushort)ReservedObjectIDs.DatabaseObject);
         p.SetTargetPlayerId((byte)ReservedPlayerIDs.Broadcast);
         p.SetTargetObjectId((ushort)ReservedObjectIDs.DatabaseObject);
+    }
+
+    public void ReceivePacket(MeshPacket p) {
+        if(p.GetPacketType() != PacketType.DatabaseUpdate) {
+            return;
+        }
+
     }
 }

@@ -125,17 +125,14 @@ public class ServerManager {
 
         MeshPacket incomingPacket = new MeshPacket(data);
 
+        
+
+        
+
         switch (incomingPacket.GetPacketType()) {
-            case PacketType.Generic:
-            Debug.Log("Received generic packet. Check your packet/serialization");
-            break;
-
-            case PacketType.VOIP:
-            ndb.ReceivePacket(incomingPacket);
-            break;
-
+            
             default:
-            Debug.Log("Unknown packet type.");
+            
             break;
         }
 
@@ -159,7 +156,7 @@ public class ServerManager {
                 byte[] trimmed = new byte[data.Length - 3];
                 Buffer.BlockCopy(data, 2, trimmed, 0, trimmed.Length);
                 
-                voipReceiver.ReceiveAudio(p);
+                
                 break;
 
                 case 7: //network ping
@@ -205,19 +202,4 @@ public class ServerManager {
         return false;
     }
 
-}
-
-public class PingPacket : MeshPacket {
-    
-    public PingPacket() : base(new byte[1]) { //always feed packet constructor a one-byte array, this is a ping
-        
-    }
-
-    public override PacketType GetTypeByte() {
-        return PacketType.Ping;
-    }
-
-    public override QosType GetQOS() {
-        return QosType.Reliable;
-    }
 }
