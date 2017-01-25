@@ -100,33 +100,24 @@ namespace Utilities {
     public class Player {
         private string displayName;
         private byte uniqueID;
-        private CSteamID id;
-        private string externalIP;
-        private string internalIP;
-        private string GUID;
+        private CSteamID steamID;
         private string privateKey;
 
         public Player() {
             displayName = "DefaultPlayerName";
             uniqueID = 0;
-            externalIP = "0.0.0.0";
-            internalIP = "0.0.0.0";
-            GUID = "0";
             privateKey = "DefaultPrivateKey";
-            
+            steamID = CSteamID.Nil;
         }
 
         public Player(string name, 
-            byte id, 
-            string exIP, 
-            string inIP,
-            string guid,
-            string privateKey) {
+            byte id,
+            string privateKey,
+            CSteamID steamID) {
+
             SetName(name);
             SetUniqueID(id);
-            SetExternalAddress(exIP);
-            SetInternalAddress(inIP);
-            SetGUID(guid);
+            SetSteamID(steamID);
             SetPrivateKey(privateKey);
 
         }
@@ -147,26 +138,13 @@ namespace Utilities {
         public byte GetUniqueID() {
             return uniqueID;
         }
-
-        public void SetExternalAddress(string a) {
-            externalIP = a;
+        
+        public void SetSteamID(CSteamID id) {
+            steamID = id;
         }
-        public string GetExternalAddress() {
-            return externalIP;
+        public CSteamID GetSteamID() {
+            return steamID;
         }
-        public void SetInternalAddress(string a) {
-            internalIP = a;
-        }
-        public string GetInternalAddress() {
-            return internalIP;
-        }
-        public void SetGUID(string a) {
-            GUID = a;
-        }
-        public string GetAddress() {
-            return GUID;
-        }
-
         public void SetPrivateKey(string k) {
             privateKey = k;
         }
@@ -177,22 +155,16 @@ namespace Utilities {
         public byte[] SerializeFull() {
             byte[] result = Encoding.ASCII.GetBytes(GetNameSanitized() + ":"
                 + uniqueID + ":"
-                + externalIP + ":"
-                + internalIP + ":"
-                + GUID + ":"
-                + privateKey);
+                + privateKey + ":"
+                + steamID.m_SteamID);
             return result;
-        }
-
-        public OutboundPunchContainer ConstructPunchContainer(bool isTargetProvider) {
-            return new OutboundPunchContainer(externalIP, internalIP, GUID, -1, isTargetProvider);
         }
 
         public static Player DeserializeFull(byte[] bytes) {
             string s = Encoding.ASCII.GetString(bytes);
             string[] parts = s.Split(':');
 
-            Player p = new Player(parts[0], byte.Parse(parts[1]), parts[2], parts[3], parts[4], parts[5]);
+            Player p = new Player(parts[0], byte.Parse(parts[1]), parts[2], new CSteamID(ulong.Parse(parts[3])));
             return p;
         }
 
@@ -427,9 +399,9 @@ namespace Utilities {
     public class Testing {
         public static void DebugDatabaseSerialization() {
             Debug.Log("Creating player named Mary Jane.");
-            Player p1 = new Player("Mary Jaaannee", 23, "1.2.3.4", "1.2.3.4", "thisismyguid", "abcde");
+            Player p1 = new Player("Mary Jaaannee", 23, "abcde", CSteamID.Nil);
             Debug.Log("Creating player named John Smith");
-            Player p2 = new Player("John Smith", 52, "1.2.3.4", "1.2.3.4", "thisismyguid", "12345");
+            Player p2 = new Player("John Smith", 52, "12345", CSteamID.Nil);
 
             DatabaseUpdate db = new DatabaseUpdate();
             db.playerList.Add(p1.GetUniqueID(), p1);
@@ -481,7 +453,7 @@ namespace Utilities {
                 Debug.Log("Desanitized Name: " + receivedDB.playerList[id].GetNameDesanitized());
                 Debug.Log("Sanitized Name: " + receivedDB.playerList[id].GetNameSanitized());
                 Debug.Log("uniqueID: " + receivedDB.playerList[id].GetUniqueID());
-                Debug.Log("address: " + receivedDB.playerList[id].GetAddress());
+                Debug.Log("steamID: " + receivedDB.playerList[id].GetSteamID());
                 Debug.Log("privateKey: " + receivedDB.playerList[id].GetPrivateKey());
                 i++;
             }

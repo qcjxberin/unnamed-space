@@ -66,8 +66,9 @@ public class NetworkCoordinator : MonoBehaviour {
 
         }
 
-
+        /*
         if(ndb.GetPlayers().Values.Count > 0) {
+            
             foreach(Player p in ndb.GetPlayers().Values) {
                 if(p.GetUniqueID() != ndb.GetSelf().GetUniqueID()
                     && connectionHistory.ContainsKey(p) == false) { //if we have not made a P2P link yet
@@ -76,7 +77,7 @@ public class NetworkCoordinator : MonoBehaviour {
                 }
             }
         }
-        
+        */
 
     }
 	
@@ -276,6 +277,7 @@ public class NetworkCoordinator : MonoBehaviour {
     //This takes a player object reference (presumably originating from the database)
     //and mutates it to contain the most up-to-date network information from the
     //mesh network architecture.
+    /*
     public void UpdatePlayer(Player p) {
         if(nath.GetMode() == NATStatus.Uninitialized) {
             Debug.LogError("NAT not intialized, can't retrieve network information.");
@@ -285,7 +287,8 @@ public class NetworkCoordinator : MonoBehaviour {
         p.SetInternalAddress(Network.player.ipAddress);
         p.SetGUID(nath.guid);
     }
-
+    */
+    /*
     public IEnumerator UploadInfoToProvider(Player me) {
         if(me == null) {
             me = new Player("TestName",
@@ -315,7 +318,7 @@ public class NetworkCoordinator : MonoBehaviour {
         sm.Broadcast(packet);
         
     }
-
+    */
 
 
     public void RoutePacketToServers(MeshPacket p) {

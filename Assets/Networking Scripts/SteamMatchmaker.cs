@@ -6,7 +6,7 @@ using Steamworks;
 public class SteamMatchmaker : MonoBehaviour {
     //called when lobby is created
     private CallResult<LobbyCreated_t> m_LobbyCreated;
-
+    private CSteamID testID;
 	
 	private void OnEnable () {
         if (SteamManager.Initialized) {
@@ -18,7 +18,8 @@ public class SteamMatchmaker : MonoBehaviour {
 	
 	// Update is called once per frame
 	void FixedUpdate () {
-        
+        if(testID != null)
+            Debug.Log(SteamFriends.GetFriendPersonaName(testID));
     }
 
     public void MakeLobby() {
@@ -30,7 +31,8 @@ public class SteamMatchmaker : MonoBehaviour {
         Debug.Log("Result: " + pCallback.m_eResult);
         Debug.Log("ID: " + pCallback.m_ulSteamIDLobby);
 
-        CSteamID testID = SteamMatchmaking.GetLobbyMemberByIndex(new CSteamID(pCallback.m_ulSteamIDLobby), 0);
+        testID = SteamMatchmaking.GetLobbyMemberByIndex(new CSteamID(pCallback.m_ulSteamIDLobby), 0);
         Debug.Log("My id: " + SteamUser.GetSteamID() + ", server member id: " + testID);
+        
     }
 }
