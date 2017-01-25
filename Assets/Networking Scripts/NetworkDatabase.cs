@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Utilities;
+using Steamworks;
 
 public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket> {
 
@@ -24,6 +25,7 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket> {
     public byte authorizedID = (byte)ReservedPlayerIDs.Unspecified;
 
     byte myId = (byte)ReservedPlayerIDs.Unspecified; //uniqueID of zero indicates nonexistant player
+    private Dictionary<CSteamID, byte> SteamIDList = new Dictionary<CSteamID, byte>();
     private Dictionary<byte, Player> playerList = new Dictionary<byte, Player>();
     private Dictionary<ushort, MeshNetworkIdentity> networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
 
@@ -68,7 +70,7 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket> {
 
     public void ReceivePacket(MeshPacket p) {
         if(p.GetPacketType() == PacketType.DatabaseUpdate) {
-            ProcessUpdate(MeshPacket.ParseContentAsDatabaseUpdate(p.GetData());
+            ProcessUpdate(MeshPacket.ParseContentAsDatabaseUpdate(p.GetData()));
         }
         else {
 

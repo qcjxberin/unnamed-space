@@ -5,7 +5,7 @@ using UnityEngine.Networking;
 using Utilities;
 using System.Collections.Generic;
 using System;
-
+using Steamworks;
 
 
 
@@ -96,10 +96,11 @@ namespace Utilities {
             punchToProvider = false;
         }
     }
-
+    [Serializable]
     public class Player {
         private string displayName;
         private byte uniqueID;
+        private CSteamID id;
         private string externalIP;
         private string internalIP;
         private string GUID;
@@ -112,6 +113,7 @@ namespace Utilities {
             internalIP = "0.0.0.0";
             GUID = "0";
             privateKey = "DefaultPrivateKey";
+            
         }
 
         public Player(string name, 
