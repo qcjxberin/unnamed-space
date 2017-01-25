@@ -27,6 +27,7 @@ public class VoipReceiver : MonoBehaviour, IReceivesPacket<MeshPacket> {
 
     // Update is called once per frame
     void Update() {
+
         PacketLossCompensate();
     }
     
@@ -44,12 +45,12 @@ public class VoipReceiver : MonoBehaviour, IReceivesPacket<MeshPacket> {
         bufferSeparation +=(100 - bufferSeparation) * 0.1f;
         if (audioSource.timeSamples > (writtenSamples % receivingBufferLength) - bufferSeparation && Mathf.Abs(audioSource.timeSamples - (writtenSamples % receivingBufferLength)) < receivingBufferLength * 0.8f) {
             bufferSeparation += 200;
-            Debug.Log("Pausing");
+            //Debug.Log("Pausing");
             audioSource.Pause();
         }
         else {
             if (audioSource.isPlaying == false) {
-                Debug.Log("Restarting");
+                //Debug.Log("Restarting");
                 audioSource.Play();
                 audioSource.loop = true;
             }

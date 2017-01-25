@@ -225,7 +225,7 @@ public class NATHelper : MonoBehaviour
      */
     public void punchThroughToServer(
         float timeout,
-        Action<int, int, OutboundPunchContainer> onHolePunched, 
+        Action<int, ushort, OutboundPunchContainer> onHolePunched, 
         Action<OutboundPunchContainer> onPunchFail,
         OutboundPunchContainer pc) {
 
@@ -240,7 +240,7 @@ public class NATHelper : MonoBehaviour
      * RakNet is shutdown so the NetworkManager can connect via UNet
      */
     IEnumerator waitForResponseFromServer(float timeout,
-        Action<int, int, OutboundPunchContainer> onHolePunched, 
+        Action<int, ushort, OutboundPunchContainer> onHolePunched, 
         Action<OutboundPunchContainer> onPunchFail,
         OutboundPunchContainer pc) {
 

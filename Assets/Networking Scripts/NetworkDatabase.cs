@@ -21,15 +21,15 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket> {
 
     */
 
+    public byte authorizedID = (byte)ReservedPlayerIDs.Unspecified;
 
-
-    byte myId = 0; //uniqueID of zero indicates nonexistant player
+    byte myId = (byte)ReservedPlayerIDs.Unspecified; //uniqueID of zero indicates nonexistant player
     private Dictionary<byte, Player> playerList = new Dictionary<byte, Player>();
     private Dictionary<ushort, MeshNetworkIdentity> networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
 
 	// Use this for initialization
 	void Start () {
-        playerList[0] = new Player(); //temporary
+        playerList[myId] = new Player(); //Initialize ourselves. Contains dummy data that will be replaced.
 	}
 	
 	// Update is called once per frame
@@ -41,12 +41,12 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket> {
         return playerList[myId];
     }
     
-    public Player LookupPlayer(byte id) { //uses playerList like a hashtable
-        return playerList[id];
+    public Dictionary<byte, Player> GetPlayers() {
+        return playerList;
     }
-
-    public MeshNetworkIdentity RetrieveObject(ushort id) {
-        return networkObjects[id];
+    
+    public Dictionary<ushort, MeshNetworkIdentity> GetObjects() {
+        return networkObjects;
     }
 
     public int CalculateDatabaseHash() {
@@ -67,9 +67,25 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket> {
     }
 
     public void ReceivePacket(MeshPacket p) {
-        if(p.GetPacketType() != PacketType.DatabaseUpdate) {
-            return;
+        if(p.GetPacketType() == PacketType.DatabaseUpdate) {
+            ProcessUpdate(MeshPacket.ParseContentAsDatabaseUpdate(p.GetData());
+        }
+        else {
+
         }
 
+    }
+
+    void ProcessUpdate(DatabaseUpdate update) {
+        foreach(byte playerID in update.playerList.Keys) {
+            if (playerList.ContainsKey(playerID)) {
+                Debug.Log("Warning: Overriding existing player");
+                playerList[playerID] = update.playerList[playerID];
+            }
+            else {
+                playerList.Add(playerID, update.playerList[playerID]);
+            }
+            
+        }
     }
 }

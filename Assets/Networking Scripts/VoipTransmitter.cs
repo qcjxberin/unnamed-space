@@ -200,7 +200,7 @@ public class VoipTransmitter : MonoBehaviour {
 
             }
 
-            AudioPacket p = new AudioPacket(compressedData.ToArray());
+            MeshPacket p = new MeshPacket();
 
         }
     }

@@ -25,6 +25,7 @@ public class ServerManager {
     public string shout;
     public VoipReceiver voipReceiver;
     public NetworkDatabase ndb;
+    public NetworkCoordinator coordinator;
     public List<Server> servers = new List<Server>();
     
 
@@ -47,11 +48,11 @@ public class ServerManager {
         return newServer;
     }
 
-    void RobustConnect(Server server, string connectAddress, int connectPort) {
+    void RobustConnect(Server server, string connectAddress, ushort connectPort, bool provider) {
         while (true) {
-            bool success = server.Connect(connectAddress, connectPort);
+            bool success = server.Connect(connectAddress, connectPort, provider);
             if (success) {
-                Debug.Log("Congratulations, peer connection achieved. Ready to begin.");
+                Debug.Log("Peer connection achieved. Waiting for peer confirmation.");
                 break;
             }
             else {
@@ -62,13 +63,19 @@ public class ServerManager {
 
 
     
-    public bool SpawnServerThenConnect(int listenPort, string connectAddress, int connectPort) {
+    public bool SpawnServerThenConnect(int listenPort, string connectAddress, ushort connectPort, bool provider) {
         Server newServer = SpawnServer(listenPort);
-        RobustConnect(newServer, connectAddress, connectPort);
+        RobustConnect(newServer, connectAddress, connectPort, provider);
         return true;
     }
 
-    
+    public int GetNumberOfPeers() {
+        int sum = 0;
+        foreach(Server s in servers) {
+            sum += s.getPeers().Count;
+        }
+        return sum;
+    }
 
     //Checks for packets from all servers.
     public void Receive() {
@@ -107,8 +114,8 @@ public class ServerManager {
     void RegisterPeer(int connectID, int serverID) {
         foreach(Server s in servers) {
             if(s.getSocketID() == serverID) {
-                Debug.Log("Registering new peer to serverId " + serverID);
-                bool success = s.AcceptPeer(connectID);
+                Debug.Log("Confirming peer connection on serverId " + serverID);
+                bool success = s.ConfirmPeer(connectID, coordinator.OnProviderConfirmed);
                 switch (success) {
                     case true:
                     Debug.Log("Successfully registered new peer.");
@@ -124,26 +131,12 @@ public class ServerManager {
     void ParseData(byte[] data) {
 
         MeshPacket incomingPacket = new MeshPacket(data);
-
-        
-
-        
-
-        switch (incomingPacket.GetPacketType()) {
-            
-            default:
-            
-            break;
-        }
-
-
-
         
 
         
         if(data[0] == 1){ //Generic packet, we have to examine this
             byte playerID = data[1];
-            Player source = ndb.LookupPlayer(playerID); //retrieve which player sent this packet
+            Player source = ndb.GetPlayers()[playerID]; //retrieve which player sent this packet
             if(source == null) { //hmmm, the NBD can't find the player
                 Debug.Log("Player from which packet originated does not exist on local NDB.");
                 return;
@@ -176,30 +169,14 @@ public class ServerManager {
 
 
     
-    public void PingAllPeers() {
-        Debug.Log("Pinging all clients.");
-        PingPacket ping = new PingPacket();
-        Broadcast(ping);
-    }
     
     public void Broadcast(MeshPacket p) {
-        
-        byte playerID = ndb.GetSelf().GetUniqueID();
-        //byte playerID = 0;
-        byte[] outboundData = new byte[1 + p.GetData().Length + 1];
-        outboundData[0] = 1; //normal 
-        outboundData[1] = playerID; //it's coming from us
-        p.GetData().CopyTo(outboundData, 2);
-        Debug.Log("Broadcasting " + outboundData.Length + "bytes");
-        foreach (Server s in servers) {
-            bool success = s.BroadcastAll(outboundData, p.GetQOS());
-            if (!success)
-                Debug.Log("Broadcast failed.");
+        foreach(Server s in servers) {
+            s.BroadcastAll(p.GetSerializedBytes(), p.qos);
         }
     }
 
-    public bool SendPacket(MeshPacket p, byte targetPlayer) {
-        return false;
-    }
+    
+    
 
 }

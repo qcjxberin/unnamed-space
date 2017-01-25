@@ -173,7 +173,7 @@ public class VOIPTEST : MonoBehaviour {
                 return;
             }
             
-            VoipReceive.ReceiveAudio(simupacket);
+            //VoipReceive.ReceivePacket(simupacket);
         }
     }
 

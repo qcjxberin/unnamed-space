@@ -30,11 +30,9 @@ public class MeshNetworkIdentity : MonoBehaviour, IMeshSerializable {
     ushort objectID;
     ushort prefabID;
     byte ownerID;
-    IReceivesPacket<MeshPacket> attachedComponent;
+    public IReceivesPacket<MeshPacket> attachedComponent;
 
-    public void Start() {
-        attachedComponent = gameObject.GetComponent<IReceivesPacket<MeshPacket>>();
-    }
+    
 
     public void HandlePacket(MeshPacket p) {
         
@@ -44,7 +42,11 @@ public class MeshNetworkIdentity : MonoBehaviour, IMeshSerializable {
         List<byte> output = new List<byte>();
         output.AddRange(BitConverter.GetBytes(objectID));
         output.AddRange(BitConverter.GetBytes(prefabID));
-        output.AddRange(BitConverter.GetBytes(ownerID));
+        output.Add(ownerID);
+        if(output.ToArray().Length != NETWORK_IDENTITY_BYTE_SIZE) {
+            Debug.LogError("Something's wrong with the network identity serialization");
+            Debug.LogError("GetSerializedBytes returned " + output.ToArray().Length + "bytes");
+        }
         return output.ToArray();
     }
     public void DeserializeAndApply(byte[] data) {
@@ -59,7 +61,7 @@ public class MeshNetworkIdentity : MonoBehaviour, IMeshSerializable {
     public void SetObjectID(ushort id) {
         objectID = id;
     }
-    public ushort GetPrefabId() {
+    public ushort GetPrefabID() {
         return prefabID;
     }
     public void SetPrefabID(ushort id) {

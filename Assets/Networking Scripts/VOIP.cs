@@ -45,7 +45,7 @@ public class VOIP : MonoBehaviour {
             }
             lastSamplePosition = newPos;
             Debug.Log("VOIP sending " + compressedData.Length + " samples");
-            nc.RoutePacketToServers(new AudioPacket(compressedData)); //VOIP type header is added here (20)
+            //nc.RoutePacketToServers(new AudioPacket(compressedData)); //VOIP type header is added here (20)
             
         }
 	}
