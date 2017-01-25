@@ -224,7 +224,6 @@ public class NetworkCoordinator : MonoBehaviour {
             Debug.LogError("Whoa! Somebody confirmed a provider connection when we weren't connecting to a provider.");
             return;
         }
-        StartCoroutine(UploadInfoToProvider());
     }
     
 
@@ -300,7 +299,7 @@ public class NetworkCoordinator : MonoBehaviour {
         
 
         DatabaseUpdate db = new DatabaseUpdate();
-        db.playerList.Add(p.GetUniqueID(), p);
+        db.playerList.Add(me.GetUniqueID(), me);
 
         MeshPacket packet = new MeshPacket(db.GetSerializedBytes(),
             PacketType.PlayerJoin,
