@@ -10,15 +10,6 @@ using Steamworks;
 
 
 namespace Utilities {
-    public enum NATStatus {
-        Uninitialized,
-        Idle,
-        ConnectingToFacilitator,
-        Listening,
-        Punching,
-        Rebooting,
-        AfterPunching
-    }
 
     public enum ReservedObjectIDs : ushort {
         Unspecified = 0,
@@ -28,7 +19,8 @@ namespace Utilities {
         Unspecified = 0,
         Broadcast = 1,
         Self = 2,
-        Provider = 3
+        Provider = 3,
+        FirstAvailable = 4
     }
 
     public enum CoordinatorStatus {
@@ -60,6 +52,11 @@ namespace Utilities {
         Pending, Connected, Disconnected
     }
 
+    public struct GameInfo {
+        public string name;
+        public string password;
+    }
+
     public class PeerInfo {
 
         public int connectionId;
@@ -73,30 +70,7 @@ namespace Utilities {
         }
     }
 
-    public class OutboundPunchContainer {
-        public string serverExternalIP;
-        public string serverInternalIP;
-        public string serverGUID;
-        public int punchID;
-        public bool punchToProvider;
-
-        public OutboundPunchContainer(string serverExIP, string serverInIP, string serverID, int id, bool isTargetProvider) {
-            serverExternalIP = serverExIP;
-            serverInternalIP = serverInIP;
-            serverGUID = serverID;
-            punchID = id;
-            punchToProvider = isTargetProvider;
-        }
-
-        public OutboundPunchContainer(string serverExIP, string serverInIP, string serverID, int id) {
-            serverExternalIP = serverExIP;
-            serverInternalIP = serverInIP;
-            serverGUID = serverID;
-            punchID = id;
-            punchToProvider = false;
-        }
-    }
-    [Serializable]
+    
     public class Player {
         private string displayName;
         private byte uniqueID;
@@ -180,7 +154,7 @@ namespace Utilities {
         private byte targetPlayerId;
         private ushort srcObjectId;
         private ushort targetObjectId;
-        public QosType qos;
+        public EP2PSend qos;
 
 
         public MeshPacket() { //if no data supplied, generate empty packet with generic typebyte
@@ -262,12 +236,65 @@ namespace Utilities {
             return output.ToArray();
         }
 
+        
+
+    }
+
+    
+    public class DatabaseUpdate {
+        
+        //These dictionaries are treated as deltas (why send the entire database?)
+        public Dictionary<byte, Player> playerList = new Dictionary<byte, Player>();
+        public Dictionary<ushort, MeshNetworkIdentity> networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
+
+        public DatabaseUpdate() {
+            playerList = new Dictionary<byte, Player>();
+            networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
+            
+        }
+
+        public DatabaseUpdate(Dictionary<byte, Player> players,
+            Dictionary<ushort, MeshNetworkIdentity> objects) {
+
+            playerList = players;
+            networkObjects = objects;
+        }
+        
+
+        public void DeserializeAndApply(byte[] serializedData) {
+            DatabaseUpdate decoded = DatabaseUpdate.ParseContentAsDatabaseUpdate(serializedData);
+            this.playerList = decoded.playerList;
+            this.networkObjects = decoded.networkObjects;
+            
+        }
+
+        public byte[] GetSerializedBytes() {
+            List<byte> output = new List<byte>();
+            
+
+            byte numPlayers = (byte)playerList.Keys.Count;
+            output.Add(numPlayers);
+            foreach (byte playerID in playerList.Keys) {
+                byte[] serializedPlayer = playerList[playerID].SerializeFull();
+                output.Add((byte)serializedPlayer.Length);
+                output.AddRange(serializedPlayer);
+            }
+            byte numObjects = (byte)networkObjects.Keys.Count;
+            output.Add(numObjects);
+            foreach(ushort objectID in networkObjects.Keys) {
+                byte[] serializedObject = networkObjects[objectID].GetSerializedBytes();
+                output.AddRange(serializedObject);
+            }
+            
+            return output.ToArray();
+        }
+
         public static DatabaseUpdate ParseContentAsDatabaseUpdate(byte[] serializedData) {
 
             Dictionary<byte, Player> playerList = new Dictionary<byte, Player>();
             Dictionary<ushort, MeshNetworkIdentity> networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
-            
-            
+
+
 
 
             byte[] rawData = serializedData;
@@ -300,94 +327,14 @@ namespace Utilities {
                 pointer += MeshNetworkIdentity.NETWORK_IDENTITY_BYTE_SIZE; //pointer now at the byte after
                 j++;
             }
-            
+
             return new DatabaseUpdate(playerList, networkObjects);
         }
+
 
     }
 
     
-    public class DatabaseUpdate {
-        
-        //These dictionaries are treated as deltas (why send the entire database?)
-        public Dictionary<byte, Player> playerList = new Dictionary<byte, Player>();
-        public Dictionary<ushort, MeshNetworkIdentity> networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
-
-        public DatabaseUpdate() {
-            playerList = new Dictionary<byte, Player>();
-            networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
-            
-        }
-
-        public DatabaseUpdate(Dictionary<byte, Player> players,
-            Dictionary<ushort, MeshNetworkIdentity> objects) {
-
-            playerList = players;
-            networkObjects = objects;
-        }
-        
-
-        public void DeserializeAndApply(byte[] serializedData) {
-            DatabaseUpdate decoded = MeshPacket.ParseContentAsDatabaseUpdate(serializedData);
-            this.playerList = decoded.playerList;
-            this.networkObjects = decoded.networkObjects;
-            
-        }
-
-        public byte[] GetSerializedBytes() {
-            List<byte> output = new List<byte>();
-            
-
-            byte numPlayers = (byte)playerList.Keys.Count;
-            output.Add(numPlayers);
-            foreach (byte playerID in playerList.Keys) {
-                byte[] serializedPlayer = playerList[playerID].SerializeFull();
-                output.Add((byte)serializedPlayer.Length);
-                output.AddRange(serializedPlayer);
-            }
-            byte numObjects = (byte)networkObjects.Keys.Count;
-            output.Add(numObjects);
-            foreach(ushort objectID in networkObjects.Keys) {
-                byte[] serializedObject = networkObjects[objectID].GetSerializedBytes();
-                output.AddRange(serializedObject);
-            }
-            
-            return output.ToArray();
-        }
-
-        
-    }
-
-
-    public class Game {
-        public string name;
-        public string password;
-        public string providerGUID;
-        public string providerInternalIP;
-        public string providerExternalIP;
-
-        public OutboundPunchContainer ConstructPunchContainer(bool isTargetProvider) {
-            return new OutboundPunchContainer(providerExternalIP, providerInternalIP, providerGUID, -1, isTargetProvider);
-        }
-
-
-
-        public Game() {
-            name = "DefaultGameName";
-            password = "";
-            providerGUID = "";
-            providerInternalIP = "0.0.0.0";
-            providerExternalIP = "0.0.0.0";
-        }
-
-        public Game(string nameIn, string passwordIn, string guidIN, string inIPIn, string exIPIn) {
-            name = nameIn;
-            password = passwordIn;
-            providerGUID = guidIN;
-            providerInternalIP = inIPIn;
-            providerExternalIP = exIPIn;
-        }
-    }
 
     public interface IReceivesPacket<MeshPacket> {
         void ReceivePacket(MeshPacket p);
@@ -435,7 +382,7 @@ namespace Utilities {
             Debug.Log("targetPlayerID: " + received.GetTargetPlayerId());
             Debug.Log("Payload length: " + received.GetData().Length);
 
-            DatabaseUpdate receivedDB = MeshPacket.ParseContentAsDatabaseUpdate(received.GetData());
+            DatabaseUpdate receivedDB = DatabaseUpdate.ParseContentAsDatabaseUpdate(received.GetData());
             Debug.Log("Received DatabaseUpdate:");
             Debug.Log("Total number of objects: " + receivedDB.networkObjects.Count);
             int i = 1;

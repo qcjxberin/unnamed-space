@@ -1,7 +1,9 @@
 ﻿using System.Collections;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Utilities;
+using Steamworks;
 
 public class UIController : MonoBehaviour {
     public GameObject WelcomeUIContainer;
@@ -12,8 +14,8 @@ public class UIController : MonoBehaviour {
     public GameObject ConnectingContainer;
     public GameObject ConnectedContainer;
 
-
-    public NetworkCoordinator nc;
+    Action<GameInfo> HostingInfoDelegate;
+    Action<CSteamID> LobbySelectionDelegate;
 
     public bool isVR = false;
     UIMode mode = UIMode.Welcome;
@@ -62,23 +64,37 @@ public class UIController : MonoBehaviour {
         }
     }
 
-    public void PopulateGames(List<Game> games) {
+    public void RequestHostingInfo(Action<GameInfo> callback) {
+        HostingInfoDelegate = callback;
+        SetUIMode(UIMode.AskForGameInfo);
+    }
+
+    public void RequestLobbySelection(Action<CSteamID> callback) {
+        LobbySelectionDelegate = callback;
+        SetUIMode(UIMode.DisplayGames);
+    }
+
+    public void PopulateGames(List<CSteamID> games) {
         foreach (GameObject entry in entries) {
             Destroy(entry, 0);
         }
         entries.Clear();
         scrollArea.sizeDelta = new Vector2(scrollArea.sizeDelta.x, (games.Count * 35) + 40);
         int i = 0;
-        foreach (Game g in games) {
+        foreach (CSteamID id in games) {
             GameObject newListing = GameObject.Instantiate(GameEntryPrefab, scrollArea) as GameObject;
             entries.Add(newListing);
             RectTransform rt = newListing.GetComponent<RectTransform>();
             rt.anchoredPosition = new Vector2(0, -5 - (35* i));
             GameListing gl = newListing.GetComponent<GameListing>();
-            gl.nc = nc;
-            gl.thisGame = g;
-            gl.UpdateLabel();
+            gl.id = id;
+            gl.name = SteamMatchmaking.GetLobbyData(id, "name");
+            gl.callback = ListingCallback;
             i++;
         }
+    }
+
+    public void ListingCallback(CSteamID id) {
+        
     }
 }
