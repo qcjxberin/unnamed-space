@@ -8,7 +8,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using Utilities;
 using Steamworks;
 
-public class MeshEndpoint {
+public class MeshEndpoint:MonoBehaviour {
 
     /*
         ServerManager.cs
