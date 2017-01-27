@@ -25,61 +25,68 @@ public class MeshEndpoint {
 
     public string shout;
     public NetworkDatabase ndb;
-    
-    
+
+    List<MeshPacket> failedPackets = new List<MeshPacket>();
+    Dictionary<MeshPacket, int> packetRetries = new Dictionary<MeshPacket, int>();
 
     //Checks for packets from all servers.
     public void Receive() {
+        if (failedPackets.Count > 0) {
+            MeshPacket p = failedPackets[0];
+            failedPackets.RemoveAt(0);
+            ParseData(p);
+        }
+
+
         uint bufferLength = 0;
         if (SteamNetworking.IsP2PPacketAvailable(out bufferLength)) {
             byte[] destBuffer = new byte[bufferLength];
             UInt32 bytesRead = 0;
             CSteamID remoteID;
             SteamNetworking.ReadP2PPacket(destBuffer, bufferLength, out bytesRead, out remoteID);
-            ParseData(destBuffer);
+
+            ParseData(new MeshPacket(destBuffer));
         }
+        
+        
     }
 
     
-    void ParseData(byte[] data) {
-
-        MeshPacket incomingPacket = new MeshPacket(data);
-        if(data[0] == 1){ //Generic game packet, we have to examine this
-            byte playerID = data[1];
-            Player source = ndb.LookupPlayer(playerID); //retrieve which player sent this packet
+    void ParseData(MeshPacket incomingPacket) {
+        
+        if(incomingPacket.GetPacketType() == (byte)PacketType.Generic){ //Generic game packet, we have to examine this
+            
+            Player source = ndb.LookupPlayer(incomingPacket.GetSourcePlayerId()); //retrieve which player sent this packet
             if(source == null) { //hmmm, the NBD can't find the player
                 Debug.LogError("Player from which packet originated does not exist on local NDB.");
                 return;
             }
 
-            byte typeData = data[2]; //typeByte describes what kind of packet this is
-            switch (typeData) {
-                case 20: //VOIP packet
-                Debug.Log("Found an audio packet");
-                byte[] trimmed = new byte[data.Length - 3];
-                Buffer.BlockCopy(data, 2, trimmed, 0, trimmed.Length);
-                break;
-
-                case 7: //network ping
-                GameObject.FindObjectOfType<indicator>().Ping();
-                break;
-
-                default:
-                Debug.Log("Unknown packet type, header " + typeData);
-                break;
+            MeshNetworkIdentity targetObject = ndb.LookupObject(incomingPacket.GetTargetObjectId());
+            if(targetObject == null) {
+                Debug.LogError("Packet's target object doesn't exist on the database!");
+                return;
             }
 
-
+            targetObject.ReceivePacket(incomingPacket);
             
         }
     }
 
     
-    public void Broadcast(MeshPacket packet) {
+    public void Send(MeshPacket packet) {
         byte[] data = packet.GetSerializedBytes();
-        foreach (Player p in ndb.GetAllPlayers()) {       
-            SteamNetworking.SendP2PPacket(p.GetSteamID(), data, (uint)data.Length, packet.qos);
+        if (packet.GetTargetPlayerId() == (byte)ReservedPlayerIDs.Broadcast) {
+            foreach (Player p in ndb.GetAllPlayers()) {
+                SteamNetworking.SendP2PPacket(p.GetSteamID(), data, (uint)data.Length, packet.qos);
+            }
         }
+        else {
+            Player target = ndb.LookupPlayer(packet.GetTargetPlayerId());
+            SteamNetworking.SendP2PPacket(target.GetSteamID(), data, (uint)data.Length, packet.qos);
+        }
+        
+        
     }
 
     

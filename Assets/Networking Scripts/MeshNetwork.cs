@@ -4,21 +4,34 @@ using UnityEngine;
 using Steamworks;
 using Utilities;
 
+[RequireComponent(typeof(UIController))]
 public class MeshNetwork : MonoBehaviour {
     UIController networkUIController;
     NetworkDatabase database;
     GameCoordinator game;
-
+    MeshEndpoint endpoint;
     //Current lobby
     CSteamID lobby;
 
     //Steamworks callbacks/callresults
     CallResult<LobbyCreated_t> m_LobbyCreated;
-    public void OnEnable() {
-        database = gameObject.GetComponent<NetworkDatabase>();
-        game = gameObject.GetComponent<GameCoordinator>();
+    CallResult<LobbyEnter_t> m_JoinedLobby;
+
+
+    void OnEnable() {
+        Debug.Log("hello!");
+
+        networkUIController = gameObject.GetComponent<UIController>();
+
+        database = gameObject.AddComponent<NetworkDatabase>();
+        database.meshnet = this;
+        endpoint = gameObject.AddComponent<MeshEndpoint>();
+        endpoint.ndb = database;
+        game = gameObject.AddComponent<GameCoordinator>();
+        
         if (SteamManager.Initialized) {
             m_LobbyCreated = CallResult<LobbyCreated_t>.Create(OnCreateLobby);
+            m_JoinedLobby = CallResult<LobbyEnter_t>.Create(OnJoinedLobby);
         }
         else {
             Debug.LogError("SteamManager not initialized!");
@@ -51,6 +64,10 @@ public class MeshNetwork : MonoBehaviour {
         }
         p.SetPrivateKey("key");
         return p;
+    }
+
+    public void RoutePacket(MeshPacket p) {
+        
     }
 
 
@@ -96,9 +113,48 @@ public class MeshNetwork : MonoBehaviour {
         networkUIController.RequestLobbySelection(OnGetLobbySelection);
     }
     public void OnGetLobbySelection(CSteamID selectedLobby) {
+        lobby = selectedLobby;
+        SteamMatchmaking.JoinLobby(selectedLobby);
+    }
+
+    protected void OnJoinedLobby(LobbyEnter_t pCallback, bool bIOfailure) {
+        networkUIController.RequestPassword(OnGetPassword);
+    }
+
+    protected void OnGetPassword(string pwd) {
+        if(SteamMatchmaking.GetLobbyData(lobby, "pwd").Equals(pwd)) {
+            RegisterWithProvider();
+        }
+        else {
+            Debug.Log("Password doesn't match!");
+            SteamMatchmaking.LeaveLobby(lobby);
+        }
+    }
+
+    protected void RegisterWithProvider() {
+
+        //Create a PlayerJoin packet, which the provider will use as a trigger to
+        //register a new player. It will update its internal database, and will
+        //distribute this info as a normal DatabaseUpdate.
+        MeshPacket p = new MeshPacket(new byte[0],
+            PacketType.PlayerJoin,
+            (byte)ReservedPlayerIDs.Unspecified,
+            (byte)ReservedPlayerIDs.Provider,
+            (byte)ReservedObjectIDs.Unspecified,
+            (byte)ReservedObjectIDs.DatabaseObject);
+
+        byte[] packetData = p.GetSerializedBytes();
+
+        SteamNetworking.SendP2PPacket(SteamMatchmaking.GetLobbyOwner(lobby),
+            packetData,
+            (uint)packetData.Length,
+            EP2PSend.k_EP2PSendReliable);
+
+        //Soon, we will receive a DatabaseUpdate with all of the up to date database information,
+        //including our own player object!
 
     }
 
     #endregion
-
+    
 }

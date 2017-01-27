@@ -37,6 +37,7 @@ namespace Utilities {
         Welcome,
         AskForGameInfo,
         DisplayGames,
+        AskForPassword,
         Connecting
     }
 
@@ -242,7 +243,7 @@ namespace Utilities {
 
     
     public class DatabaseUpdate {
-        
+
         //These dictionaries are treated as deltas (why send the entire database?)
         public Dictionary<byte, Player> playerList = new Dictionary<byte, Player>();
         public Dictionary<ushort, MeshNetworkIdentity> networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
@@ -294,9 +295,6 @@ namespace Utilities {
             Dictionary<byte, Player> playerList = new Dictionary<byte, Player>();
             Dictionary<ushort, MeshNetworkIdentity> networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
 
-
-
-
             byte[] rawData = serializedData;
             byte numOfNewPlayers = rawData[0];
             int pointer = 1;
@@ -341,6 +339,9 @@ namespace Utilities {
     }
     public interface IMeshSerializable {
         byte[] GetSerializedBytes();
+    }
+    public interface INetworked<MeshNetworkIdentity> {
+        MeshNetworkIdentity GetIdentity();
     }
 
     public class Testing {
