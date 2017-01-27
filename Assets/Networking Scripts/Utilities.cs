@@ -10,15 +10,6 @@ using Steamworks;
 
 
 namespace Utilities {
-    public enum NATStatus {
-        Uninitialized,
-        Idle,
-        ConnectingToFacilitator,
-        Listening,
-        Punching,
-        Rebooting,
-        AfterPunching
-    }
 
     public enum ReservedObjectIDs : ushort {
         Unspecified = 0,
@@ -28,7 +19,8 @@ namespace Utilities {
         Unspecified = 0,
         Broadcast = 1,
         Self = 2,
-        Provider = 3
+        Provider = 3,
+        FirstAvailable = 4
     }
 
     public enum CoordinatorStatus {
@@ -45,6 +37,7 @@ namespace Utilities {
         Welcome,
         AskForGameInfo,
         DisplayGames,
+        AskForPassword,
         Connecting
     }
 
@@ -60,6 +53,11 @@ namespace Utilities {
         Pending, Connected, Disconnected
     }
 
+    public struct GameInfo {
+        public string name;
+        public string password;
+    }
+
     public class PeerInfo {
 
         public int connectionId;
@@ -73,60 +71,28 @@ namespace Utilities {
         }
     }
 
-    public class OutboundPunchContainer {
-        public string serverExternalIP;
-        public string serverInternalIP;
-        public string serverGUID;
-        public int punchID;
-        public bool punchToProvider;
-
-        public OutboundPunchContainer(string serverExIP, string serverInIP, string serverID, int id, bool isTargetProvider) {
-            serverExternalIP = serverExIP;
-            serverInternalIP = serverInIP;
-            serverGUID = serverID;
-            punchID = id;
-            punchToProvider = isTargetProvider;
-        }
-
-        public OutboundPunchContainer(string serverExIP, string serverInIP, string serverID, int id) {
-            serverExternalIP = serverExIP;
-            serverInternalIP = serverInIP;
-            serverGUID = serverID;
-            punchID = id;
-            punchToProvider = false;
-        }
-    }
-    [Serializable]
+    
     public class Player {
         private string displayName;
         private byte uniqueID;
-        private CSteamID id;
-        private string externalIP;
-        private string internalIP;
-        private string GUID;
+        private CSteamID steamID;
         private string privateKey;
 
         public Player() {
             displayName = "DefaultPlayerName";
             uniqueID = 0;
-            externalIP = "0.0.0.0";
-            internalIP = "0.0.0.0";
-            GUID = "0";
             privateKey = "DefaultPrivateKey";
-            
+            steamID = CSteamID.Nil;
         }
 
         public Player(string name, 
-            byte id, 
-            string exIP, 
-            string inIP,
-            string guid,
-            string privateKey) {
+            byte id,
+            string privateKey,
+            CSteamID steamID) {
+
             SetName(name);
             SetUniqueID(id);
-            SetExternalAddress(exIP);
-            SetInternalAddress(inIP);
-            SetGUID(guid);
+            SetSteamID(steamID);
             SetPrivateKey(privateKey);
 
         }
@@ -147,26 +113,13 @@ namespace Utilities {
         public byte GetUniqueID() {
             return uniqueID;
         }
-
-        public void SetExternalAddress(string a) {
-            externalIP = a;
+        
+        public void SetSteamID(CSteamID id) {
+            steamID = id;
         }
-        public string GetExternalAddress() {
-            return externalIP;
+        public CSteamID GetSteamID() {
+            return steamID;
         }
-        public void SetInternalAddress(string a) {
-            internalIP = a;
-        }
-        public string GetInternalAddress() {
-            return internalIP;
-        }
-        public void SetGUID(string a) {
-            GUID = a;
-        }
-        public string GetAddress() {
-            return GUID;
-        }
-
         public void SetPrivateKey(string k) {
             privateKey = k;
         }
@@ -177,22 +130,16 @@ namespace Utilities {
         public byte[] SerializeFull() {
             byte[] result = Encoding.ASCII.GetBytes(GetNameSanitized() + ":"
                 + uniqueID + ":"
-                + externalIP + ":"
-                + internalIP + ":"
-                + GUID + ":"
-                + privateKey);
+                + privateKey + ":"
+                + steamID.m_SteamID);
             return result;
-        }
-
-        public OutboundPunchContainer ConstructPunchContainer(bool isTargetProvider) {
-            return new OutboundPunchContainer(externalIP, internalIP, GUID, -1, isTargetProvider);
         }
 
         public static Player DeserializeFull(byte[] bytes) {
             string s = Encoding.ASCII.GetString(bytes);
             string[] parts = s.Split(':');
 
-            Player p = new Player(parts[0], byte.Parse(parts[1]), parts[2], parts[3], parts[4], parts[5]);
+            Player p = new Player(parts[0], byte.Parse(parts[1]), parts[2], new CSteamID(ulong.Parse(parts[3])));
             return p;
         }
 
@@ -208,7 +155,7 @@ namespace Utilities {
         private byte targetPlayerId;
         private ushort srcObjectId;
         private ushort targetObjectId;
-        public QosType qos;
+        public EP2PSend qos;
 
 
         public MeshPacket() { //if no data supplied, generate empty packet with generic typebyte
@@ -290,13 +237,63 @@ namespace Utilities {
             return output.ToArray();
         }
 
+        
+
+    }
+
+    
+    public class DatabaseUpdate {
+
+        //These dictionaries are treated as deltas (why send the entire database?)
+        public Dictionary<byte, Player> playerList = new Dictionary<byte, Player>();
+        public Dictionary<ushort, MeshNetworkIdentity> networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
+
+        public DatabaseUpdate() {
+            playerList = new Dictionary<byte, Player>();
+            networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
+            
+        }
+
+        public DatabaseUpdate(Dictionary<byte, Player> players,
+            Dictionary<ushort, MeshNetworkIdentity> objects) {
+
+            playerList = players;
+            networkObjects = objects;
+        }
+        
+
+        public void DeserializeAndApply(byte[] serializedData) {
+            DatabaseUpdate decoded = DatabaseUpdate.ParseContentAsDatabaseUpdate(serializedData);
+            this.playerList = decoded.playerList;
+            this.networkObjects = decoded.networkObjects;
+            
+        }
+
+        public byte[] GetSerializedBytes() {
+            List<byte> output = new List<byte>();
+            
+
+            byte numPlayers = (byte)playerList.Keys.Count;
+            output.Add(numPlayers);
+            foreach (byte playerID in playerList.Keys) {
+                byte[] serializedPlayer = playerList[playerID].SerializeFull();
+                output.Add((byte)serializedPlayer.Length);
+                output.AddRange(serializedPlayer);
+            }
+            byte numObjects = (byte)networkObjects.Keys.Count;
+            output.Add(numObjects);
+            foreach(ushort objectID in networkObjects.Keys) {
+                byte[] serializedObject = networkObjects[objectID].GetSerializedBytes();
+                output.AddRange(serializedObject);
+            }
+            
+            return output.ToArray();
+        }
+
         public static DatabaseUpdate ParseContentAsDatabaseUpdate(byte[] serializedData) {
 
             Dictionary<byte, Player> playerList = new Dictionary<byte, Player>();
             Dictionary<ushort, MeshNetworkIdentity> networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
-            
-            
-
 
             byte[] rawData = serializedData;
             byte numOfNewPlayers = rawData[0];
@@ -328,94 +325,14 @@ namespace Utilities {
                 pointer += MeshNetworkIdentity.NETWORK_IDENTITY_BYTE_SIZE; //pointer now at the byte after
                 j++;
             }
-            
+
             return new DatabaseUpdate(playerList, networkObjects);
         }
+
 
     }
 
     
-    public class DatabaseUpdate {
-        
-        //These dictionaries are treated as deltas (why send the entire database?)
-        public Dictionary<byte, Player> playerList = new Dictionary<byte, Player>();
-        public Dictionary<ushort, MeshNetworkIdentity> networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
-
-        public DatabaseUpdate() {
-            playerList = new Dictionary<byte, Player>();
-            networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
-            
-        }
-
-        public DatabaseUpdate(Dictionary<byte, Player> players,
-            Dictionary<ushort, MeshNetworkIdentity> objects) {
-
-            playerList = players;
-            networkObjects = objects;
-        }
-        
-
-        public void DeserializeAndApply(byte[] serializedData) {
-            DatabaseUpdate decoded = MeshPacket.ParseContentAsDatabaseUpdate(serializedData);
-            this.playerList = decoded.playerList;
-            this.networkObjects = decoded.networkObjects;
-            
-        }
-
-        public byte[] GetSerializedBytes() {
-            List<byte> output = new List<byte>();
-            
-
-            byte numPlayers = (byte)playerList.Keys.Count;
-            output.Add(numPlayers);
-            foreach (byte playerID in playerList.Keys) {
-                byte[] serializedPlayer = playerList[playerID].SerializeFull();
-                output.Add((byte)serializedPlayer.Length);
-                output.AddRange(serializedPlayer);
-            }
-            byte numObjects = (byte)networkObjects.Keys.Count;
-            output.Add(numObjects);
-            foreach(ushort objectID in networkObjects.Keys) {
-                byte[] serializedObject = networkObjects[objectID].GetSerializedBytes();
-                output.AddRange(serializedObject);
-            }
-            
-            return output.ToArray();
-        }
-
-        
-    }
-
-
-    public class Game {
-        public string name;
-        public string password;
-        public string providerGUID;
-        public string providerInternalIP;
-        public string providerExternalIP;
-
-        public OutboundPunchContainer ConstructPunchContainer(bool isTargetProvider) {
-            return new OutboundPunchContainer(providerExternalIP, providerInternalIP, providerGUID, -1, isTargetProvider);
-        }
-
-
-
-        public Game() {
-            name = "DefaultGameName";
-            password = "";
-            providerGUID = "";
-            providerInternalIP = "0.0.0.0";
-            providerExternalIP = "0.0.0.0";
-        }
-
-        public Game(string nameIn, string passwordIn, string guidIN, string inIPIn, string exIPIn) {
-            name = nameIn;
-            password = passwordIn;
-            providerGUID = guidIN;
-            providerInternalIP = inIPIn;
-            providerExternalIP = exIPIn;
-        }
-    }
 
     public interface IReceivesPacket<MeshPacket> {
         void ReceivePacket(MeshPacket p);
@@ -423,13 +340,16 @@ namespace Utilities {
     public interface IMeshSerializable {
         byte[] GetSerializedBytes();
     }
+    public interface INetworked<MeshNetworkIdentity> {
+        MeshNetworkIdentity GetIdentity();
+    }
 
     public class Testing {
         public static void DebugDatabaseSerialization() {
             Debug.Log("Creating player named Mary Jane.");
-            Player p1 = new Player("Mary Jaaannee", 23, "1.2.3.4", "1.2.3.4", "thisismyguid", "abcde");
+            Player p1 = new Player("Mary Jaaannee", 23, "abcde", CSteamID.Nil);
             Debug.Log("Creating player named John Smith");
-            Player p2 = new Player("John Smith", 52, "1.2.3.4", "1.2.3.4", "thisismyguid", "12345");
+            Player p2 = new Player("John Smith", 52, "12345", CSteamID.Nil);
 
             DatabaseUpdate db = new DatabaseUpdate();
             db.playerList.Add(p1.GetUniqueID(), p1);
@@ -463,7 +383,7 @@ namespace Utilities {
             Debug.Log("targetPlayerID: " + received.GetTargetPlayerId());
             Debug.Log("Payload length: " + received.GetData().Length);
 
-            DatabaseUpdate receivedDB = MeshPacket.ParseContentAsDatabaseUpdate(received.GetData());
+            DatabaseUpdate receivedDB = DatabaseUpdate.ParseContentAsDatabaseUpdate(received.GetData());
             Debug.Log("Received DatabaseUpdate:");
             Debug.Log("Total number of objects: " + receivedDB.networkObjects.Count);
             int i = 1;
@@ -481,7 +401,7 @@ namespace Utilities {
                 Debug.Log("Desanitized Name: " + receivedDB.playerList[id].GetNameDesanitized());
                 Debug.Log("Sanitized Name: " + receivedDB.playerList[id].GetNameSanitized());
                 Debug.Log("uniqueID: " + receivedDB.playerList[id].GetUniqueID());
-                Debug.Log("address: " + receivedDB.playerList[id].GetAddress());
+                Debug.Log("steamID: " + receivedDB.playerList[id].GetSteamID());
                 Debug.Log("privateKey: " + receivedDB.playerList[id].GetPrivateKey());
                 i++;
             }

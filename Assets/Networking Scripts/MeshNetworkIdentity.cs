@@ -4,7 +4,7 @@ using UnityEngine;
 using Utilities;
 using System;
 
-public class MeshNetworkIdentity : MonoBehaviour, IMeshSerializable {
+public class MeshNetworkIdentity : MonoBehaviour, IReceivesPacket<MeshPacket>, IMeshSerializable {
 
     /// <summary>
     /// 
@@ -34,7 +34,7 @@ public class MeshNetworkIdentity : MonoBehaviour, IMeshSerializable {
 
     
 
-    public void HandlePacket(MeshPacket p) {
+    public void ReceivePacket(MeshPacket p) {
         
     }
 

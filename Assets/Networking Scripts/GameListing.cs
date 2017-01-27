@@ -2,21 +2,17 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Utilities;
+using System;
+using Steamworks;
 
 public class GameListing : MonoBehaviour {
-    public Game thisGame;
-    public NetworkCoordinator nc;
+    public string lobbyName;
+    public CSteamID id;
+    public Action<CSteamID> callback;
     public UnityEngine.UI.Text label;
 	
     public void SelectGame() {
-        if(thisGame == null) {
-            Debug.LogError("Selected game has no <Game> object attached!");
-            return;
-        }
-        nc.SelectGame(thisGame);
+        callback(id);
     }
     
-    public void UpdateLabel() {
-        label.text = thisGame.name.Replace("$COLON", ":");
-    }
 }
