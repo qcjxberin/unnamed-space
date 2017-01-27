@@ -20,7 +20,7 @@ public class MeshNetwork : MonoBehaviour {
 
     void OnEnable() {
         Debug.Log("hello!");
-
+        Testing.DebugDatabaseSerialization();
         networkUIController = gameObject.GetComponent<UIController>();
 
         database = gameObject.AddComponent<NetworkDatabase>();
@@ -41,7 +41,7 @@ public class MeshNetwork : MonoBehaviour {
     //Create a networked player given SteamID information.
     //Pass in SteamUser.GetSteamID() for <id> if you want to
     //construct your own player object.
-    public Player ConstructPlayer(bool isProvider, CSteamID id) {
+    public Player ConstructPlayer(CSteamID id) {
         Player p = new Player();
         string name = SteamFriends.GetFriendPersonaName(id);
         if (name.Equals("")) {
@@ -49,25 +49,13 @@ public class MeshNetwork : MonoBehaviour {
             return null;
         }
         p.SetName(name);
-        p.SetSteamID(id);
-        if (isProvider) {
-            p.SetUniqueID((byte)ReservedPlayerIDs.Provider);
-        }
-        else {
-            byte byteID = database.RequestAvailableID();
-            if (byteID >= (byte)ReservedPlayerIDs.FirstAvailable)
-                p.SetUniqueID(byteID);
-            else {
-                Debug.LogError("Can't find available byte ID.");
-                return null;
-            }
-        }
+        p.SetUniqueID(id.m_SteamID);
         p.SetPrivateKey("key");
         return p;
     }
 
     public void RoutePacket(MeshPacket p) {
-        
+        endpoint.Send(p);
     }
 
 
@@ -75,9 +63,8 @@ public class MeshNetwork : MonoBehaviour {
 
     public void HostGame() {
         //First, we get our own player object, and we make ourselves the provider.
-        Player me = ConstructPlayer(true, SteamUser.GetSteamID());
+        Player me = ConstructPlayer(SteamUser.GetSteamID());
         database.AddPlayer(me);
-        database.SetMyID(me.GetUniqueID());
 
         //Actually create the lobby. Password info, etc, will be set after this.
         m_LobbyCreated.Set(SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypePrivate, 4));
@@ -138,18 +125,14 @@ public class MeshNetwork : MonoBehaviour {
         //distribute this info as a normal DatabaseUpdate.
         MeshPacket p = new MeshPacket(new byte[0],
             PacketType.PlayerJoin,
-            (byte)ReservedPlayerIDs.Unspecified,
-            (byte)ReservedPlayerIDs.Provider,
+            SteamUser.GetSteamID().m_SteamID,
+            SteamMatchmaking.GetLobbyOwner(lobby).m_SteamID,
             (byte)ReservedObjectIDs.Unspecified,
             (byte)ReservedObjectIDs.DatabaseObject);
 
         byte[] packetData = p.GetSerializedBytes();
 
-        SteamNetworking.SendP2PPacket(SteamMatchmaking.GetLobbyOwner(lobby),
-            packetData,
-            (uint)packetData.Length,
-            EP2PSend.k_EP2PSendReliable);
-
+        RoutePacket(p);
         //Soon, we will receive a DatabaseUpdate with all of the up to date database information,
         //including our own player object!
 

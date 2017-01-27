@@ -9,55 +9,53 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
 
     /*
         NetworkDatabase is a collection of information that is a summary of the server-authoritative game state.
-        Each player has a local NetworkDatabase, but only one player's NetworkDatabase is truly
-        the "server" authority. This authorized NetworkDatabase keeps track of object ownership and
-        player status. All non-authorized NetworkDatabases mirror the one authorized NetworkDatabase, and try
-        to keep as up to date as possible.
-
-        ObjectId codes:
-        0 = undefined object
-        1 = NetworkDatabase object
+        The clever part of this is that the NetworkDatabase is an INetworked object just
+        like everything else in the game. This means that only one of this object actually
+        exists across the network! All the other NetworkDatabases on the client computers
+        are "shadows" of the real NetworkDatabase, just like all of the props and objects.
+        The MeshNetworkIdentity that is attached to this component contains the ownerID of the
+        database, and this is the ID that determines the provider of the real database
+        information. Just like a coffee cup has an owner, and that owner has the definitive
+        information on that coffee cup, the database also has an owner.
         
         playerList: hashtable between playerID and Player object
-        networkObjects: hashtable between objectID and MeshNetworkIdentity component
+        objectList: hashtable between objectID and MeshNetworkIdentity component
 
     */
-    
-    public MeshNetwork meshnet; //MeshNetwork object. Set when MeshNetwork starts up.
 
+    public bool UseFullUpdates = false; //Should the network database send the entire database every time something changes?
+    public MeshNetwork meshnet; //MeshNetwork object. Set when MeshNetwork starts up
     public MeshNetworkIdentity thisObjectIdentity; //Required for INetworked
 
-    public byte authorizedID = (byte)ReservedPlayerIDs.Provider;
+    //Serialized below here.
+    private Dictionary<ulong, Player> playerList = new Dictionary<ulong, Player>();
+    private Dictionary<ushort, MeshNetworkIdentity> objectList = new Dictionary<ushort, MeshNetworkIdentity>();
 
-    byte myId = (byte)ReservedPlayerIDs.Unspecified; //uniqueID of zero indicates nonexistant player
-    
-    private Dictionary<byte, Player> playerList = new Dictionary<byte, Player>();
-    private Dictionary<ushort, MeshNetworkIdentity> networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
+    private Dictionary<ulong, Player> playerListDelta = new Dictionary<ulong, Player>();
+    private Dictionary<ushort, MeshNetworkIdentity> objectListDelta = new Dictionary<ushort, MeshNetworkIdentity>();
 
-    
-	
-	//Entirely destroy the database records.
+
+    //Entirely destroy the database records.
     //For obvious reasons, try avoid doing this unless you know what you're doing.
-	public void DestroyDatabase() {
-        myId = (byte)ReservedPlayerIDs.Unspecified;
-        playerList = new Dictionary<byte, Player>();
-        networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
+    public void DestroyDatabase() {
+        playerList = new Dictionary<ulong, Player>();
+        objectList = new Dictionary<ushort, MeshNetworkIdentity>();
     }
 
     public MeshNetworkIdentity GetIdentity() {
         return thisObjectIdentity;
     }
-
-    public Player GetSelf() {
-        return playerList[myId];
-    }
     
     public void AddPlayer(Player p) {
-        if (playerList.ContainsKey((byte)ReservedPlayerIDs.Provider)) {
-            Debug.LogError("Trying to replace the provider on this network! Hotswap not implemented!");
+        if (playerList.ContainsKey(p.GetUniqueID())) {
+            Debug.LogError("User already exists!");
             return;
         }
+        if(p.GetUniqueID() == GetIdentity().GetOwnerID() && p.GetUniqueID() != (ulong)ReservedPlayerIDs.Unspecified) {
+            Debug.LogError("New user trying to override current provider. Hotswap not yet implemented.");
+        }
         playerList.Add(p.GetUniqueID(), p);
+        FlagChange(p);
     }
 
     public Player LookupPlayer(byte byteID) {
@@ -67,9 +65,9 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
             return null;
     }
 
-    public Player LookupPlayer(CSteamID steamID) {
+    public Player LookupPlayer(ulong id) {
         foreach(Player p in playerList.Values) {
-            if (p.GetSteamID().Equals(steamID)) {
+            if (p.GetUniqueID().Equals(id)) {
                 return p;
             }
         }
@@ -77,8 +75,8 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     }
 
     public MeshNetworkIdentity LookupObject(ushort objectID) {
-        if (networkObjects.ContainsKey(objectID))
-            return networkObjects[objectID];
+        if (objectList.ContainsKey(objectID))
+            return objectList[objectID];
         else
             return null;
 
@@ -90,24 +88,34 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         return output;
     }
     
-
-    public void SetMyID(byte me) {
-        myId = me;
+    private void FlagChange(Player p) {
+        playerListDelta.Add(p.GetUniqueID(), p);
     }
-
-    public int CalculateDatabaseHash() {
-        return networkObjects.GetHashCode();
+    private void FlagChange(MeshNetworkIdentity i) {
+        objectListDelta.Add(i.GetObjectID(), i);
+    }
+    public void ProcessUpdate() {
+        SendDelta(playerListDelta, objectListDelta);
     }
     
-    public int CalculatePlayerHash() {
-        return playerList.GetHashCode();
+    public static ushort GenerateDatabaseChecksum(Dictionary<ulong, Player> playerList,
+        Dictionary<ushort, MeshNetworkIdentity> objectList) {
+
+        DatabaseUpdate container = new DatabaseUpdate(playerList, objectList);
+        byte[] data = container.GetSerializedBytes();
+        ushort checksum = 0;
+        foreach (byte cur_byte in data) {
+            checksum = (ushort)(((checksum & 0xFFFF) >> 1) + ((checksum & 0x1) << 15)); // Rotate the accumulator
+            checksum = (ushort)((checksum + cur_byte) & 0xFFFF);                        // Add the next chunk
+        }
+        return checksum;
     }
 
-    public void SendDelta(Dictionary<byte, Player> playerUpdate, Dictionary<ushort, MeshNetworkIdentity> objectUpdate) {
+    private void SendDelta(Dictionary<ulong, Player> playerUpdate, Dictionary<ushort, MeshNetworkIdentity> objectUpdate) {
         MeshPacket p = new MeshPacket();
         p.SetPacketType(PacketType.DatabaseUpdate);
         p.qos = EP2PSend.k_EP2PSendReliable;
-        p.SetSourcePlayerId(myId);
+        p.SetSourcePlayerId(GetIdentity().GetOwnerID());
         p.SetSourceObjectId((ushort)ReservedObjectIDs.DatabaseObject);
         p.SetTargetPlayerId((byte)ReservedPlayerIDs.Broadcast);
         p.SetTargetObjectId((ushort)ReservedObjectIDs.DatabaseObject);
@@ -139,13 +147,5 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
             
         }
     }
-
-    public byte RequestAvailableID() {
-        for(byte i = (byte)ReservedPlayerIDs.FirstAvailable; i < byte.MaxValue; i++) {
-            if (!playerList.ContainsKey(i)) {
-                return i;
-            }
-        }
-        return (byte)ReservedPlayerIDs.Unspecified;
-    }
+    
 }

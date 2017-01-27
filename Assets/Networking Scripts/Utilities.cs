@@ -15,12 +15,9 @@ namespace Utilities {
         Unspecified = 0,
         DatabaseObject = 1
     }
-    public enum ReservedPlayerIDs : byte {
+    public enum ReservedPlayerIDs : ulong {
         Unspecified = 0,
         Broadcast = 1,
-        Self = 2,
-        Provider = 3,
-        FirstAvailable = 4
     }
 
     public enum CoordinatorStatus {
@@ -58,41 +55,27 @@ namespace Utilities {
         public string password;
     }
 
-    public class PeerInfo {
-
-        public int connectionId;
-        public string address;
-        public ushort destPort;
-        public bool confirmed;
-        public bool isProvider;
-
-        public PeerInfo(int id) {
-            connectionId = id;
-        }
-    }
+    
 
     
     public class Player {
         private string displayName;
-        private byte uniqueID;
-        private CSteamID steamID;
+        private ulong uniqueID;
         private string privateKey;
 
         public Player() {
             displayName = "DefaultPlayerName";
             uniqueID = 0;
             privateKey = "DefaultPrivateKey";
-            steamID = CSteamID.Nil;
+            
         }
 
         public Player(string name, 
-            byte id,
-            string privateKey,
-            CSteamID steamID) {
+            ulong id,
+            string privateKey) {
 
             SetName(name);
             SetUniqueID(id);
-            SetSteamID(steamID);
             SetPrivateKey(privateKey);
 
         }
@@ -107,19 +90,14 @@ namespace Utilities {
             return displayName.Replace("$COLON", ":");
         }
 
-        public void SetUniqueID(byte id) {
+        public void SetUniqueID(ulong id) {
             uniqueID = id;
         }
-        public byte GetUniqueID() {
+        public ulong GetUniqueID() {
             return uniqueID;
         }
         
-        public void SetSteamID(CSteamID id) {
-            steamID = id;
-        }
-        public CSteamID GetSteamID() {
-            return steamID;
-        }
+        
         public void SetPrivateKey(string k) {
             privateKey = k;
         }
@@ -130,8 +108,7 @@ namespace Utilities {
         public byte[] SerializeFull() {
             byte[] result = Encoding.ASCII.GetBytes(GetNameSanitized() + ":"
                 + uniqueID + ":"
-                + privateKey + ":"
-                + steamID.m_SteamID);
+                + privateKey);
             return result;
         }
 
@@ -139,7 +116,7 @@ namespace Utilities {
             string s = Encoding.ASCII.GetString(bytes);
             string[] parts = s.Split(':');
 
-            Player p = new Player(parts[0], byte.Parse(parts[1]), parts[2], new CSteamID(ulong.Parse(parts[3])));
+            Player p = new Player(parts[0], ulong.Parse(parts[1]), parts[2]);
             return p;
         }
 
@@ -151,8 +128,8 @@ namespace Utilities {
 
         private byte[] data;
         private PacketType type;
-        private byte srcPlayerId;
-        private byte targetPlayerId;
+        private ulong srcPlayerId;
+        private ulong targetPlayerId;
         private ushort srcObjectId;
         private ushort targetObjectId;
         public EP2PSend qos;
@@ -167,17 +144,22 @@ namespace Utilities {
             targetObjectId = 0;
         }
         public MeshPacket(byte[] serializedData) { //if data supplied, generate packet with generic typebyte
-
+            int bytesRead = 0;
             type = (PacketType)serializedData[0];
-            srcPlayerId = serializedData[1];
-            targetPlayerId = serializedData[2];
-            srcObjectId = BitConverter.ToUInt16(serializedData, 3);
-            targetObjectId = BitConverter.ToUInt16(serializedData, 5);
-            data = new byte[serializedData.Length - 7];
-            Buffer.BlockCopy(serializedData, 7, data, 0, data.Length);
+            bytesRead++;
+            srcPlayerId = BitConverter.ToUInt64(serializedData, 1);
+            bytesRead += 8;
+            targetPlayerId = BitConverter.ToUInt64(serializedData, 9);
+            bytesRead += 8;
+            srcObjectId = BitConverter.ToUInt16(serializedData, 17);
+            bytesRead += 2;
+            targetObjectId = BitConverter.ToUInt16(serializedData, 19);
+            bytesRead += 2;
+            data = new byte[serializedData.Length - bytesRead];
+            Buffer.BlockCopy(serializedData, bytesRead, data, 0, data.Length);
 
         }
-        public MeshPacket(byte[] contents, PacketType type, byte srcPlayer, byte targetPlayer, ushort srcObject, ushort targetObject) {
+        public MeshPacket(byte[] contents, PacketType type, ulong srcPlayer, ulong targetPlayer, ushort srcObject, ushort targetObject) {
             data = contents;
             this.type = type;
             srcPlayerId = srcPlayer;
@@ -198,16 +180,16 @@ namespace Utilities {
         public void SetData(byte[] data) {
             this.data = data;
         }
-        public byte GetSourcePlayerId() {
+        public ulong GetSourcePlayerId() {
             return srcPlayerId;
         }
-        public byte GetTargetPlayerId() {
+        public ulong GetTargetPlayerId() {
             return targetPlayerId;
         }
-        public void SetSourcePlayerId(byte i) {
+        public void SetSourcePlayerId(ulong i) {
             srcPlayerId = i;
         }
-        public void SetTargetPlayerId(byte i) {
+        public void SetTargetPlayerId(ulong i) {
             targetPlayerId = i;
         }
 
@@ -228,8 +210,8 @@ namespace Utilities {
             List<byte> output = new List<byte>();
 
             output.Add((byte)type);
-            output.Add(srcPlayerId);
-            output.Add(targetPlayerId);
+            output.AddRange(BitConverter.GetBytes(srcPlayerId));
+            output.AddRange(BitConverter.GetBytes(targetPlayerId));
             output.AddRange(BitConverter.GetBytes(srcObjectId));
             output.AddRange(BitConverter.GetBytes(targetObjectId));
             output.AddRange(data);
@@ -245,27 +227,27 @@ namespace Utilities {
     public class DatabaseUpdate {
 
         //These dictionaries are treated as deltas (why send the entire database?)
-        public Dictionary<byte, Player> playerList = new Dictionary<byte, Player>();
-        public Dictionary<ushort, MeshNetworkIdentity> networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
+        public Dictionary<ulong, Player> playerList = new Dictionary<ulong, Player>();
+        public Dictionary<ushort, MeshNetworkIdentity> objectList = new Dictionary<ushort, MeshNetworkIdentity>();
 
         public DatabaseUpdate() {
-            playerList = new Dictionary<byte, Player>();
-            networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
+            playerList = new Dictionary<ulong, Player>();
+            objectList = new Dictionary<ushort, MeshNetworkIdentity>();
             
         }
 
-        public DatabaseUpdate(Dictionary<byte, Player> players,
+        public DatabaseUpdate(Dictionary<ulong, Player> players,
             Dictionary<ushort, MeshNetworkIdentity> objects) {
 
             playerList = players;
-            networkObjects = objects;
+            objectList = objects;
         }
         
 
         public void DeserializeAndApply(byte[] serializedData) {
             DatabaseUpdate decoded = DatabaseUpdate.ParseContentAsDatabaseUpdate(serializedData);
             this.playerList = decoded.playerList;
-            this.networkObjects = decoded.networkObjects;
+            this.objectList = decoded.objectList;
             
         }
 
@@ -275,15 +257,15 @@ namespace Utilities {
 
             byte numPlayers = (byte)playerList.Keys.Count;
             output.Add(numPlayers);
-            foreach (byte playerID in playerList.Keys) {
+            foreach (ulong playerID in playerList.Keys) {
                 byte[] serializedPlayer = playerList[playerID].SerializeFull();
                 output.Add((byte)serializedPlayer.Length);
                 output.AddRange(serializedPlayer);
             }
-            byte numObjects = (byte)networkObjects.Keys.Count;
+            byte numObjects = (byte)objectList.Keys.Count;
             output.Add(numObjects);
-            foreach(ushort objectID in networkObjects.Keys) {
-                byte[] serializedObject = networkObjects[objectID].GetSerializedBytes();
+            foreach(ushort objectID in objectList.Keys) {
+                byte[] serializedObject = objectList[objectID].GetSerializedBytes();
                 output.AddRange(serializedObject);
             }
             
@@ -292,7 +274,7 @@ namespace Utilities {
 
         public static DatabaseUpdate ParseContentAsDatabaseUpdate(byte[] serializedData) {
 
-            Dictionary<byte, Player> playerList = new Dictionary<byte, Player>();
+            Dictionary<ulong, Player> playerList = new Dictionary<ulong, Player>();
             Dictionary<ushort, MeshNetworkIdentity> networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
 
             byte[] rawData = serializedData;
@@ -347,9 +329,9 @@ namespace Utilities {
     public class Testing {
         public static void DebugDatabaseSerialization() {
             Debug.Log("Creating player named Mary Jane.");
-            Player p1 = new Player("Mary Jaaannee", 23, "abcde", CSteamID.Nil);
+            Player p1 = new Player("Mary Jananee", 2233443, "abcde");
             Debug.Log("Creating player named John Smith");
-            Player p2 = new Player("John Smith", 52, "12345", CSteamID.Nil);
+            Player p2 = new Player("John Smith", 52342342, "12345");
 
             DatabaseUpdate db = new DatabaseUpdate();
             db.playerList.Add(p1.GetUniqueID(), p1);
@@ -357,11 +339,11 @@ namespace Utilities {
 
             
 
-            //db.networkObjects.Add(obj1.GetObjectID(), obj1);
-            //db.networkObjects.Add(obj2.GetObjectID(), obj2);
+            //db.objectList.Add(obj1.GetObjectID(), obj1);
+            //db.objectList.Add(obj2.GetObjectID(), obj2);
 
             Debug.Log("Total payload length: " + db.GetSerializedBytes().Length);
-
+            Debug.Log("Database hash: " + NetworkDatabase.GenerateDatabaseChecksum(db.playerList, db.objectList));
             MeshPacket p = new MeshPacket();
             p.SetPacketType(PacketType.DatabaseUpdate);
             p.SetSourceObjectId((byte)ReservedObjectIDs.DatabaseObject);
@@ -385,23 +367,23 @@ namespace Utilities {
 
             DatabaseUpdate receivedDB = DatabaseUpdate.ParseContentAsDatabaseUpdate(received.GetData());
             Debug.Log("Received DatabaseUpdate:");
-            Debug.Log("Total number of objects: " + receivedDB.networkObjects.Count);
+            Debug.Log("Database hash: " + NetworkDatabase.GenerateDatabaseChecksum(db.playerList, db.objectList));
+            Debug.Log("Total number of objects: " + receivedDB.objectList.Count);
             int i = 1;
-            foreach(ushort id in receivedDB.networkObjects.Keys) {
+            foreach(ushort id in receivedDB.objectList.Keys) {
                 Debug.Log("Object " + i + ": ");
-                Debug.Log("objectID: " + receivedDB.networkObjects[id].GetObjectID());
-                Debug.Log("prefabID: " + receivedDB.networkObjects[id].GetPrefabID());
-                Debug.Log("ownerID : " + receivedDB.networkObjects[id].GetOwnerID());
+                Debug.Log("objectID: " + receivedDB.objectList[id].GetObjectID());
+                Debug.Log("prefabID: " + receivedDB.objectList[id].GetPrefabID());
+                Debug.Log("ownerID : " + receivedDB.objectList[id].GetOwnerID());
                 i++;
             }
             Debug.Log("Total number of players: " + receivedDB.playerList.Count);
             i = 1;
-            foreach (byte id in receivedDB.playerList.Keys) {
+            foreach (ulong id in receivedDB.playerList.Keys) {
                 Debug.Log("Player " + i + ": ");
                 Debug.Log("Desanitized Name: " + receivedDB.playerList[id].GetNameDesanitized());
                 Debug.Log("Sanitized Name: " + receivedDB.playerList[id].GetNameSanitized());
                 Debug.Log("uniqueID: " + receivedDB.playerList[id].GetUniqueID());
-                Debug.Log("steamID: " + receivedDB.playerList[id].GetSteamID());
                 Debug.Log("privateKey: " + receivedDB.playerList[id].GetPrivateKey());
                 i++;
             }

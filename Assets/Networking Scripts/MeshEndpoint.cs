@@ -53,24 +53,32 @@ public class MeshEndpoint:MonoBehaviour {
 
     
     void ParseData(MeshPacket incomingPacket) {
-        
-        if(incomingPacket.GetPacketType() == (byte)PacketType.Generic){ //Generic game packet, we have to examine this
-            
-            Player source = ndb.LookupPlayer(incomingPacket.GetSourcePlayerId()); //retrieve which player sent this packet
-            if(source == null) { //hmmm, the NBD can't find the player
-                Debug.LogError("Player from which packet originated does not exist on local NDB.");
-                return;
-            }
 
-            MeshNetworkIdentity targetObject = ndb.LookupObject(incomingPacket.GetTargetObjectId());
-            if(targetObject == null) {
-                Debug.LogError("Packet's target object doesn't exist on the database!");
-                return;
-            }
-
-            targetObject.ReceivePacket(incomingPacket);
-            
+        if(incomingPacket.GetPacketType() == PacketType.PlayerJoin) {
+            CSteamID sID = new CSteamID(incomingPacket.GetSourcePlayerId());
+            Player p = new Player();
+            p.SetName(SteamFriends.GetFriendPersonaName(sID));
+            p.SetUniqueID(sID.m_SteamID);
+            p.SetPrivateKey("key"); //#cybersecurity
+            ndb.AddPlayer(new Player());
         }
+
+
+        Player source = ndb.LookupPlayer(incomingPacket.GetSourcePlayerId()); //retrieve which player sent this packet
+        if (source == null) { //hmmm, the NBD can't find the player
+            Debug.LogError("Player from which packet originated does not exist on local NDB.");
+            return;
+        }
+
+        MeshNetworkIdentity targetObject = ndb.LookupObject(incomingPacket.GetTargetObjectId());
+        if (targetObject == null) {
+            Debug.LogError("Packet's target object doesn't exist on the database!");
+            return;
+        }
+
+        targetObject.ReceivePacket(incomingPacket);
+
+
     }
 
     
@@ -78,12 +86,12 @@ public class MeshEndpoint:MonoBehaviour {
         byte[] data = packet.GetSerializedBytes();
         if (packet.GetTargetPlayerId() == (byte)ReservedPlayerIDs.Broadcast) {
             foreach (Player p in ndb.GetAllPlayers()) {
-                SteamNetworking.SendP2PPacket(p.GetSteamID(), data, (uint)data.Length, packet.qos);
+                SteamNetworking.SendP2PPacket(new CSteamID(p.GetUniqueID()), data, (uint)data.Length, packet.qos);
             }
         }
         else {
             Player target = ndb.LookupPlayer(packet.GetTargetPlayerId());
-            SteamNetworking.SendP2PPacket(target.GetSteamID(), data, (uint)data.Length, packet.qos);
+            SteamNetworking.SendP2PPacket(new CSteamID(target.GetUniqueID()), data, (uint)data.Length, packet.qos);
         }
         
         

@@ -24,12 +24,12 @@ public class MeshNetworkIdentity : MonoBehaviour, IReceivesPacket<MeshPacket>, I
     /// 
     /// </summary>
 
-    public const int NETWORK_IDENTITY_BYTE_SIZE = 5;
+    public const int NETWORK_IDENTITY_BYTE_SIZE = 12;
 
 
     ushort objectID;
     ushort prefabID;
-    byte ownerID;
+    ulong ownerID;
     public IReceivesPacket<MeshPacket> attachedComponent;
 
     
@@ -42,7 +42,7 @@ public class MeshNetworkIdentity : MonoBehaviour, IReceivesPacket<MeshPacket>, I
         List<byte> output = new List<byte>();
         output.AddRange(BitConverter.GetBytes(objectID));
         output.AddRange(BitConverter.GetBytes(prefabID));
-        output.Add(ownerID);
+        output.AddRange(BitConverter.GetBytes(ownerID));
         if(output.ToArray().Length != NETWORK_IDENTITY_BYTE_SIZE) {
             Debug.LogError("Something's wrong with the network identity serialization");
             Debug.LogError("GetSerializedBytes returned " + output.ToArray().Length + "bytes");
@@ -52,7 +52,7 @@ public class MeshNetworkIdentity : MonoBehaviour, IReceivesPacket<MeshPacket>, I
     public void DeserializeAndApply(byte[] data) {
         objectID = BitConverter.ToUInt16(data, 0);
         prefabID = BitConverter.ToUInt16(data, 2);
-        ownerID = data[4];
+        ownerID = BitConverter.ToUInt64(data, 4);
     }
 
     public ushort GetObjectID() {
@@ -67,10 +67,10 @@ public class MeshNetworkIdentity : MonoBehaviour, IReceivesPacket<MeshPacket>, I
     public void SetPrefabID(ushort id) {
         prefabID = id;
     }
-    public byte GetOwnerID() {
+    public ulong GetOwnerID() {
         return ownerID;
     }
-    public void SetOwnerID(byte id) {
+    public void SetOwnerID(ulong id) {
         ownerID = id;
     }
 }
