@@ -61,7 +61,7 @@ public class MeshNetwork : MonoBehaviour {
 
     
     public bool SpawnObject(MeshNetworkIdentity i) {
-
+        return false;
         if(database == null) {
             Debug.LogError("Local network database does not exist (yet). Did you mean to use SpawnDatabase()?");
             return false;
