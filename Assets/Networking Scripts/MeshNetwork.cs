@@ -18,15 +18,16 @@ public class MeshNetwork : MonoBehaviour {
     CallResult<LobbyEnter_t> m_JoinedLobby;
 
 
+    //Network Prefab Registry
+    Dictionary<ushort, GameObject> networkPrefabs = new Dictionary<ushort, GameObject>();
+
     void OnEnable() {
         Debug.Log("hello!");
-        Testing.DebugDatabaseSerialization();
+        //Testing.DebugDatabaseSerialization(gameObject.AddComponent<MeshNetworkIdentity>(), gameObject.AddComponent<MeshNetworkIdentity>());
         networkUIController = gameObject.GetComponent<UIController>();
 
-        database = gameObject.AddComponent<NetworkDatabase>();
-        database.meshnet = this;
+        
         endpoint = gameObject.AddComponent<MeshEndpoint>();
-        endpoint.ndb = database;
         game = gameObject.AddComponent<GameCoordinator>();
         
         if (SteamManager.Initialized) {
@@ -37,7 +38,7 @@ public class MeshNetwork : MonoBehaviour {
             Debug.LogError("SteamManager not initialized!");
         }
     }
-
+    
     //Create a networked player given SteamID information.
     //Pass in SteamUser.GetSteamID() for <id> if you want to
     //construct your own player object.
@@ -56,6 +57,28 @@ public class MeshNetwork : MonoBehaviour {
 
     public void RoutePacket(MeshPacket p) {
         endpoint.Send(p);
+    }
+
+    
+    public bool SpawnObject(MeshNetworkIdentity i) {
+
+        if(database == null) {
+            Debug.LogError("Local network database does not exist (yet). Did you mean to use SpawnDatabase()?");
+            return false;
+        }
+
+        if(networkPrefabs.ContainsKey(i.GetPrefabID()) == false){
+            Debug.LogError("NetworkPrefab registry error: Requested prefab ID does not exist.");
+            return false;
+        }
+        GameObject g = Instantiate(networkPrefabs[i.GetPrefabID()]);
+        IdentityContainer c = g.GetComponent<IdentityContainer>();
+        if(c == null) {
+            Debug.LogError("NetworkPrefab error: spawned prefab does not contain IdentityContainer");
+            return false;
+        }
+        c.SetIdentity(i);
+        database.AddObject(i);
     }
 
 
@@ -130,6 +153,7 @@ public class MeshNetwork : MonoBehaviour {
             (byte)ReservedObjectIDs.Unspecified,
             (byte)ReservedObjectIDs.DatabaseObject);
 
+        p.qos = EP2PSend.k_EP2PSendReliable;
         byte[] packetData = p.GetSerializedBytes();
 
         RoutePacket(p);

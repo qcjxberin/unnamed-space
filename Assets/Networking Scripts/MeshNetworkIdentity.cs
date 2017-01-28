@@ -4,12 +4,12 @@ using UnityEngine;
 using Utilities;
 using System;
 
-public class MeshNetworkIdentity : MonoBehaviour, IReceivesPacket<MeshPacket>, IMeshSerializable {
+public class MeshNetworkIdentity : IReceivesPacket<MeshPacket>, IMeshSerializable {
 
     /// <summary>
     /// 
-    ///     MeshNetworkIdentity is a component that must be attached to every
-    ///     object that is to be synchronized across the mesh network. It receives
+    ///     MeshNetworkIdentity is a script that allows objects to be 
+    ///     synchronized across the mesh network. It receives
     ///     packets from the ServerManager based on its objectID, and routes them
     ///     to the correct component on the object (MeshNetworkTransform, etc). It
     ///     is packet-unaware, meaning that it will take any MeshPacket and route it
@@ -17,9 +17,14 @@ public class MeshNetworkIdentity : MonoBehaviour, IReceivesPacket<MeshPacket>, I
     ///     for outgoing packets, where a component on the object (MeshNetworkTransform, etc)
     ///     will use the Identity to send the packets.
     ///     
-    ///     As it is a MonoBehavior, there is no constructor method. When constructing
-    ///     a new network object that uses MeshNetworkIdentity, use DeserializeAndApply
-    ///     with the proper serialized byte data to set the properties of the MeshNetworkIdentity.
+    ///     MeshNetworkIdentity lives inside a container component on a networked prefab.
+    ///     It contains a list attachedComponents, which keeps track of all of the networked
+    ///     components living on the prefab. It will broadcast the incoming packet
+    ///     indiscriminately to all components in this list. Each component must be
+    ///     responsible for sanity-checking the incoming packet. The vast majority
+    ///     of usage-cases will involve only one networked component attached to this
+    ///     MeshNetworkIdentity. However, if there are multiple, you should use the
+    ///     Utilities.PacketType enumeration to differentiate your data types.
     ///
     /// 
     /// </summary>
@@ -30,12 +35,21 @@ public class MeshNetworkIdentity : MonoBehaviour, IReceivesPacket<MeshPacket>, I
     ushort objectID;
     ushort prefabID;
     ulong ownerID;
-    public IReceivesPacket<MeshPacket> attachedComponent;
+
+    //Not serialized across the network! This gets initialized and populated
+    //when the container component is enabled. All IReceivesPacket components
+    //attached to the relevant object will wind up in this List<>.
+    public List<IReceivesPacket<MeshPacket>> attachedComponents;
 
     
 
     public void ReceivePacket(MeshPacket p) {
-        
+        if(attachedComponents.Count == 0) {
+            Debug.Log("This MeshNetworkIdentity has no associated components! Forgot to populate it?");
+        }
+        foreach(IReceivesPacket<MeshPacket> component in attachedComponents) {
+            component.ReceivePacket(p);
+        }
     }
 
     public byte[] GetSerializedBytes() {

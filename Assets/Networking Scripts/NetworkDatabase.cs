@@ -4,7 +4,7 @@ using UnityEngine;
 using Utilities;
 using Steamworks;
 
-[RequireComponent(typeof(MeshNetworkIdentity))]
+[RequireComponent(typeof(IdentityContainer))]
 public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetworked<MeshNetworkIdentity> {
 
     /*
@@ -49,13 +49,25 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     public void AddPlayer(Player p) {
         if (playerList.ContainsKey(p.GetUniqueID())) {
             Debug.LogError("User already exists!");
+            //Player objects never change.
             return;
         }
         if(p.GetUniqueID() == GetIdentity().GetOwnerID() && p.GetUniqueID() != (ulong)ReservedPlayerIDs.Unspecified) {
             Debug.LogError("New user trying to override current provider. Hotswap not yet implemented.");
+            return;
         }
         playerList.Add(p.GetUniqueID(), p);
         FlagChange(p);
+    }
+
+    public void AddObject(MeshNetworkIdentity i) {
+        if (objectList.ContainsKey(i.GetObjectID())) {
+            Debug.LogError("Object already exists!");
+            //Network identities never change.
+            //If you want to change something about a network object, do it
+            //by sending it packets. That's the polite way.
+            return;
+        }
     }
 
     public Player LookupPlayer(byte byteID) {
@@ -101,7 +113,9 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     public static ushort GenerateDatabaseChecksum(Dictionary<ulong, Player> playerList,
         Dictionary<ushort, MeshNetworkIdentity> objectList) {
 
-        DatabaseUpdate container = new DatabaseUpdate(playerList, objectList);
+        //Always use zero for the hash when we create this dummy container.
+        //Otherwise we'd be hashing a hash!
+        DatabaseUpdate container = new DatabaseUpdate(playerList, objectList, 0);
         byte[] data = container.GetSerializedBytes();
         ushort checksum = 0;
         foreach (byte cur_byte in data) {
@@ -120,14 +134,17 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         p.SetTargetPlayerId((byte)ReservedPlayerIDs.Broadcast);
         p.SetTargetObjectId((ushort)ReservedObjectIDs.DatabaseObject);
 
-        DatabaseUpdate update = new DatabaseUpdate(playerUpdate, objectUpdate);
+        ushort hash = GenerateDatabaseChecksum(playerList, objectList);
+        DatabaseUpdate update = new DatabaseUpdate(playerUpdate, objectUpdate, hash);
         p.SetData(update.GetSerializedBytes());
         meshnet.RoutePacket(p);
     }
 
     public void ReceivePacket(MeshPacket p) {
         if(p.GetPacketType() == PacketType.DatabaseUpdate) {
-            ProcessUpdate(DatabaseUpdate.ParseContentAsDatabaseUpdate(p.GetData()));
+            if(p.GetSourcePlayerId() == GetIdentity().GetOwnerID()) { //if the sender is authorized to make changes
+                ProcessUpdate(DatabaseUpdate.ParseContentAsDatabaseUpdate(p.GetData()));
+            }
         }
         else {
 
@@ -136,15 +153,11 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     }
 
     void ProcessUpdate(DatabaseUpdate update) {
-        foreach(byte playerID in update.playerList.Keys) {
-            if (playerList.ContainsKey(playerID)) {
-                Debug.Log("Warning: Overriding existing player");
-                playerList[playerID] = update.playerList[playerID];
-            }
-            else {
-                playerList.Add(playerID, update.playerList[playerID]);
-            }
-            
+        foreach(Player p in update.playerList.Values) {
+            AddPlayer(p);
+        }
+        foreach(MeshNetworkIdentity o in update.objectList.Values) {
+
         }
     }
     

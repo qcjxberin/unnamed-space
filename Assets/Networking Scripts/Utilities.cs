@@ -229,18 +229,21 @@ namespace Utilities {
         //These dictionaries are treated as deltas (why send the entire database?)
         public Dictionary<ulong, Player> playerList = new Dictionary<ulong, Player>();
         public Dictionary<ushort, MeshNetworkIdentity> objectList = new Dictionary<ushort, MeshNetworkIdentity>();
+        public ushort fullHash;
 
         public DatabaseUpdate() {
             playerList = new Dictionary<ulong, Player>();
             objectList = new Dictionary<ushort, MeshNetworkIdentity>();
-            
+            fullHash = 0;
         }
 
         public DatabaseUpdate(Dictionary<ulong, Player> players,
-            Dictionary<ushort, MeshNetworkIdentity> objects) {
+            Dictionary<ushort, MeshNetworkIdentity> objects,
+            ushort databaseHash) {
 
             playerList = players;
             objectList = objects;
+            fullHash = databaseHash;
         }
         
 
@@ -268,7 +271,7 @@ namespace Utilities {
                 byte[] serializedObject = objectList[objectID].GetSerializedBytes();
                 output.AddRange(serializedObject);
             }
-            
+            output.AddRange(BitConverter.GetBytes(fullHash));
             return output.ToArray();
         }
 
@@ -307,15 +310,15 @@ namespace Utilities {
                 pointer += MeshNetworkIdentity.NETWORK_IDENTITY_BYTE_SIZE; //pointer now at the byte after
                 j++;
             }
-
-            return new DatabaseUpdate(playerList, networkObjects);
+            ushort hash = BitConverter.ToUInt16(rawData, pointer);
+            return new DatabaseUpdate(playerList, networkObjects, hash);
         }
 
 
     }
 
     
-
+    //All networked components must implement this.
     public interface IReceivesPacket<MeshPacket> {
         void ReceivePacket(MeshPacket p);
     }
@@ -327,7 +330,7 @@ namespace Utilities {
     }
 
     public class Testing {
-        public static void DebugDatabaseSerialization() {
+        public static void DebugDatabaseSerialization(MeshNetworkIdentity dummy1, MeshNetworkIdentity dummy2) {
             Debug.Log("Creating player named Mary Jane.");
             Player p1 = new Player("Mary Jananee", 2233443, "abcde");
             Debug.Log("Creating player named John Smith");
@@ -337,10 +340,13 @@ namespace Utilities {
             db.playerList.Add(p1.GetUniqueID(), p1);
             db.playerList.Add(p2.GetUniqueID(), p2);
 
-            
+            dummy1.SetObjectID(1337);
+            dummy1.SetOwnerID(1234);
+            dummy2.SetObjectID(4200);
+            dummy2.SetOwnerID(4321);
 
-            //db.objectList.Add(obj1.GetObjectID(), obj1);
-            //db.objectList.Add(obj2.GetObjectID(), obj2);
+            db.objectList.Add(dummy1.GetObjectID(), dummy1);
+            db.objectList.Add(dummy2.GetObjectID(), dummy2);
 
             Debug.Log("Total payload length: " + db.GetSerializedBytes().Length);
             Debug.Log("Database hash: " + NetworkDatabase.GenerateDatabaseChecksum(db.playerList, db.objectList));
