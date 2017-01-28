@@ -80,7 +80,7 @@ public class VoipTransmitter : MonoBehaviour {
     NAudio.Wave.Compression.AcmStream downsampler;
     NAudio.Wave.Compression.AcmStream bitreduce;
 
-
+    NAudio.Codecs.G722Codec g722;
 
 
     void Start() {
@@ -238,7 +238,7 @@ public class VoipTransmitter : MonoBehaviour {
         bitreduce = new NAudio.Wave.Compression.AcmStream(new NAudio.Wave.WaveFormat(TRANSMIT_FREQUENCY, 16, 1), new NAudio.Wave.WaveFormat(TRANSMIT_FREQUENCY, 8, 1));
         lowPassFilter = NAudio.Dsp.BiQuadFilter.LowPassFilter(SOURCE_FREQUENCY, TRANSMIT_FREQUENCY * 0.5f, lowPassQuality);
 
-
+        g722 = new NAudio.Codecs.G722Codec();
 
         Debug.Log("Channels: " + lastClip.channels);
         Debug.Log("Bitconvert is little endian? " + BitConverter.IsLittleEndian);
