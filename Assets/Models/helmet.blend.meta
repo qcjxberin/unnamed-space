@@ -19,6 +19,7 @@ ModelImporter:
     100022: Cube_006
     100024: Cube_007
     100026: //RootNode
+    100028: base_human_male_default_005
     400000: base_human_male_default
     400002: base_human_male_default_001
     400004: base_human_male_default_002
@@ -33,6 +34,7 @@ ModelImporter:
     400022: Cube_006
     400024: Cube_007
     400026: //RootNode
+    400028: base_human_male_default_005
     2300000: base_human_male_default
     2300002: base_human_male_default_001
     2300004: base_human_male_default_002
@@ -46,6 +48,7 @@ ModelImporter:
     2300020: Cube_005
     2300022: Cube_006
     2300024: Cube_007
+    2300026: base_human_male_default_005
     3300000: base_human_male_default
     3300002: base_human_male_default_001
     3300004: base_human_male_default_002
@@ -59,6 +62,7 @@ ModelImporter:
     3300020: Cube_005
     3300022: Cube_006
     3300024: Cube_007
+    3300026: base_human_male_default_005
     4300000: Cube_007
     4300002: Cube_006
     4300004: base_human_male_default_004
@@ -72,6 +76,7 @@ ModelImporter:
     4300020: Cube_002
     4300022: Cube_001
     4300024: Cube
+    4300026: base_human_male_default_005
     7400000: Default Take
     9500000: //RootNode
   materials:

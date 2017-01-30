@@ -359,7 +359,7 @@ namespace Utilities {
             db.objectDelta.Add(dummy2, StateChange.Addition);
 
             Debug.Log("Total payload length: " + db.GetSerializedBytes().Length);
-            Debug.Log("Database hash: " + NetworkDatabase.GenerateDatabaseChecksum(db.playerDelta, db.objectDelta));
+            //Debug.Log("Database hash: " + NetworkDatabase.GenerateDatabaseChecksum(db.playerDelta, db.objectDelta));
             MeshPacket p = new MeshPacket();
             p.SetPacketType(PacketType.DatabaseUpdate);
             p.SetSourceObjectId((byte)ReservedObjectIDs.DatabaseObject);
@@ -383,24 +383,24 @@ namespace Utilities {
 
             DatabaseUpdate receivedDB = DatabaseUpdate.ParseContentAsDatabaseUpdate(received.GetData());
             Debug.Log("Received DatabaseUpdate:");
-            Debug.Log("Database hash: " + NetworkDatabase.GenerateDatabaseChecksum(db.playerList, db.objectList));
-            Debug.Log("Total number of objects: " + receivedDB.objectList.Count);
+            //Debug.Log("Database hash: " + NetworkDatabase.GenerateDatabaseChecksum(db.playerDelta, db.objectDelta));
+            Debug.Log("Total number of objects: " + receivedDB.objectDelta.Count);
             int i = 1;
-            foreach(ushort id in receivedDB.objectList.Keys) {
+            foreach(MeshNetworkIdentity id in receivedDB.objectDelta.Keys) {
                 Debug.Log("Object " + i + ": ");
-                Debug.Log("objectID: " + receivedDB.objectList[id].GetObjectID());
-                Debug.Log("prefabID: " + receivedDB.objectList[id].GetPrefabID());
-                Debug.Log("ownerID : " + receivedDB.objectList[id].GetOwnerID());
+                Debug.Log("objectID: " + id.GetObjectID());
+                Debug.Log("prefabID: " + id.GetPrefabID());
+                Debug.Log("ownerID : " + id.GetOwnerID());
                 i++;
             }
-            Debug.Log("Total number of players: " + receivedDB.playerList.Count);
+            Debug.Log("Total number of players: " + receivedDB.playerDelta.Count);
             i = 1;
-            foreach (ulong id in receivedDB.playerList.Keys) {
+            foreach (Player player in receivedDB.playerDelta.Keys) {
                 Debug.Log("Player " + i + ": ");
-                Debug.Log("Desanitized Name: " + receivedDB.playerList[id].GetNameDesanitized());
-                Debug.Log("Sanitized Name: " + receivedDB.playerList[id].GetNameSanitized());
-                Debug.Log("uniqueID: " + receivedDB.playerList[id].GetUniqueID());
-                Debug.Log("privateKey: " + receivedDB.playerList[id].GetPrivateKey());
+                Debug.Log("Desanitized Name: " + player.GetNameDesanitized());
+                Debug.Log("Sanitized Name: " + player.GetNameSanitized());
+                Debug.Log("uniqueID: " + player.GetUniqueID());
+                Debug.Log("privateKey: " + player.GetPrivateKey());
                 i++;
             }
         }

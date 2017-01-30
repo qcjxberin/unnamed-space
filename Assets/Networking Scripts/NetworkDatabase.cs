@@ -30,10 +30,7 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     //Serialized below here.
     private Dictionary<ulong, Player> playerList = new Dictionary<ulong, Player>();
     private Dictionary<ushort, MeshNetworkIdentity> objectList = new Dictionary<ushort, MeshNetworkIdentity>();
-
-    private Dictionary<Player, StateChange> playerListDelta = new Dictionary<Player, StateChange>();
-    private Dictionary<MeshNetworkIdentity, StateChange> objectListDelta = new Dictionary<MeshNetworkIdentity, StateChange>();
-
+    
 
     //Entirely destroy the database records.
     //For obvious reasons, try avoid doing this unless you know what you're doing.
@@ -57,7 +54,7 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
             return;
         }
         playerList.Add(p.GetUniqueID(), p);
-        FlagChange(p);
+        Process(p, StateChange.Addition);
     }
 
     public void AddObject(MeshNetworkIdentity i) {
@@ -100,29 +97,10 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         return output;
     }
     
-    private void FlagRemoval(Player p) {
-        if (playerListDelta.ContainsKey(p)) {
-            if(playerListDelta[p] != StateChange.Removal) {
-                playerListDelta.Remove(p);
-            }
-        }
-        else {
-            playerListDelta.Add(p, StateChange.Removal);
-        }
-        
-    }
-    private void FlagAddition(Player p) {
-        if (playerListDelta.ContainsKey(p)) {
-            if (playerListDelta[p] != StateChange.Addition) {
-                playerListDelta.Remove(p);
-            }
-        }
-        else {
-            playerListDelta.Add(p, StateChange.Removal);
-        }
-
-    }
-    public void ProcessUpdate() {
+    private void Process(Player p, StateChange s) {
+        Dictionary<Player, StateChange> playerListDelta = new Dictionary<Player, StateChange>();
+        Dictionary<MeshNetworkIdentity, StateChange> objectListDelta = new Dictionary<MeshNetworkIdentity, StateChange>();
+        playerListDelta.Add(p, s);
         SendDelta(playerListDelta, objectListDelta);
     }
     
@@ -169,7 +147,7 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     public void ReceivePacket(MeshPacket p) {
         if(p.GetPacketType() == PacketType.DatabaseUpdate) {
             if(p.GetSourcePlayerId() == GetIdentity().GetOwnerID()) { //if the sender is authorized to make changes
-                ProcessUpdate(DatabaseUpdate.ParseContentAsDatabaseUpdate(p.GetData()));
+                //ProcessUpdate(DatabaseUpdate.ParseContentAsDatabaseUpdate(p.GetData()));
             }
         }
         else {
@@ -177,14 +155,6 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         }
 
     }
-
-    void ProcessUpdate(DatabaseUpdate update) {
-        foreach(Player p in update.playerList.Values) {
-            AddPlayer(p);
-        }
-        foreach(MeshNetworkIdentity o in update.objectList.Values) {
-
-        }
-    }
+    
     
 }
