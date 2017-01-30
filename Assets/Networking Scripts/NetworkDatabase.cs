@@ -42,11 +42,13 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     public MeshNetworkIdentity GetIdentity() {
         return thisObjectIdentity;
     }
-    
+    public void SetIdentity(MeshNetworkIdentity id) {
+        thisObjectIdentity = id;
+    }
+
     public void AddPlayer(Player p) {
         if (playerList.ContainsKey(p.GetUniqueID())) {
             Debug.LogError("User already exists!");
-            //Player objects never change.
             return;
         }
         if(p.GetUniqueID() == GetIdentity().GetOwnerID() && p.GetUniqueID() != (ulong)ReservedPlayerIDs.Unspecified) {
@@ -54,16 +56,19 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
             return;
         }
         playerList.Add(p.GetUniqueID(), p);
-        Process(p, StateChange.Addition);
+        if(meshnet.GetSteamID() == GetIdentity().GetOwnerID()) {
+            SendPlayerUpdate(p, StateChange.Addition);
+        }
     }
 
     public void AddObject(MeshNetworkIdentity i) {
         if (objectList.ContainsKey(i.GetObjectID())) {
             Debug.LogError("Object already exists!");
-            //Network identities never change.
-            //If you want to change something about a network object, do it
-            //by sending it packets. That's the polite way.
             return;
+        }
+        objectList.Add(i.GetObjectID(), i);
+        if (meshnet.GetSteamID() == GetIdentity().GetOwnerID()) {
+            SendObjectUpdate(i, StateChange.Addition);
         }
     }
 
@@ -97,14 +102,18 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         return output;
     }
     
-    private void Process(Player p, StateChange s) {
+    private void SendPlayerUpdate(Player p, StateChange s) {
         Dictionary<Player, StateChange> playerListDelta = new Dictionary<Player, StateChange>();
         Dictionary<MeshNetworkIdentity, StateChange> objectListDelta = new Dictionary<MeshNetworkIdentity, StateChange>();
         playerListDelta.Add(p, s);
         SendDelta(playerListDelta, objectListDelta);
     }
-    
-
+    private void SendObjectUpdate(MeshNetworkIdentity id, StateChange s) {
+        Dictionary<Player, StateChange> playerListDelta = new Dictionary<Player, StateChange>();
+        Dictionary<MeshNetworkIdentity, StateChange> objectListDelta = new Dictionary<MeshNetworkIdentity, StateChange>();
+        objectListDelta.Add(id, s);
+        SendDelta(playerListDelta, objectListDelta);
+    }
 
     public static ushort GenerateDatabaseChecksum(Dictionary<ulong, Player> playerList,
         Dictionary<ushort, MeshNetworkIdentity> objectList) {
@@ -140,14 +149,14 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
 
         ushort hash = GenerateDatabaseChecksum(playerList, objectList);
         DatabaseUpdate update = new DatabaseUpdate(playerUpdate, objectUpdate, hash);
-        p.SetData(update.GetSerializedBytes());
+        p.SetContents(update.GetSerializedBytes());
         meshnet.RoutePacket(p);
     }
 
     public void ReceivePacket(MeshPacket p) {
         if(p.GetPacketType() == PacketType.DatabaseUpdate) {
             if(p.GetSourcePlayerId() == GetIdentity().GetOwnerID()) { //if the sender is authorized to make changes
-                //ProcessUpdate(DatabaseUpdate.ParseContentAsDatabaseUpdate(p.GetData()));
+                ReceiveUpdate(DatabaseUpdate.ParseContentAsDatabaseUpdate(p.GetContents()));
             }
         }
         else {
@@ -156,5 +165,28 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
 
     }
     
+    //This is called when the authorized database sends an update to this database.
+    //If this object is the authorized database, this should never be called.
+    public void ReceiveUpdate(DatabaseUpdate dbup) {
+        foreach(Player p in dbup.playerDelta.Keys) {
+            if(dbup.playerDelta[p] == StateChange.Addition) {
+                AddPlayer(p);
+            }else if(dbup.playerDelta[p] == StateChange.Removal) {
+                if (playerList.ContainsKey(p.GetUniqueID())) {
+                    //RemovePlayer(p);
+                }
+                else {
+                    Debug.Log("Removal request for player that doesn't exist.");
+                }
+            }else if(dbup.playerDelta[p] == StateChange.Change) {
+                if (playerList.ContainsKey(p.GetUniqueID())) {
+                    playerList[p.GetUniqueID()] = p;
+                }
+                else {
+                    Debug.Log("Removal request for player that doesn't exist.");
+                }
+            }
+        }
+    }
     
 }

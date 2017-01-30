@@ -7,7 +7,7 @@ using Utilities;
 [RequireComponent(typeof(UIController))]
 public class MeshNetwork : MonoBehaviour {
     UIController networkUIController;
-    NetworkDatabase database;
+    public NetworkDatabase database;
     GameCoordinator game;
     MeshEndpoint endpoint;
     //Current lobby
@@ -18,16 +18,16 @@ public class MeshNetwork : MonoBehaviour {
     CallResult<LobbyEnter_t> m_JoinedLobby;
 
 
-    //Network Prefab Registry
-    Dictionary<ushort, GameObject> networkPrefabs = new Dictionary<ushort, GameObject>();
+    
 
-    void OnEnable() {
+    void Start() {
         Debug.Log("hello!");
         //Testing.DebugDatabaseSerialization(gameObject.AddComponent<MeshNetworkIdentity>(), gameObject.AddComponent<MeshNetworkIdentity>());
         networkUIController = gameObject.GetComponent<UIController>();
 
         
         endpoint = gameObject.AddComponent<MeshEndpoint>();
+        endpoint.meshnet = this;
         game = gameObject.AddComponent<GameCoordinator>();
         
         if (SteamManager.Initialized) {
@@ -55,36 +55,29 @@ public class MeshNetwork : MonoBehaviour {
         return p;
     }
 
+    public ulong GetSteamID() {
+        return SteamUser.GetSteamID().m_SteamID;
+    }
+
     public void RoutePacket(MeshPacket p) {
         endpoint.Send(p);
     }
 
     
-    public bool SpawnObject(MeshNetworkIdentity i) {
-        return false;
-        if(database == null) {
-            Debug.LogError("Local network database does not exist (yet). Did you mean to use SpawnDatabase()?");
-            return false;
-        }
-
-        if(networkPrefabs.ContainsKey(i.GetPrefabID()) == false){
-            Debug.LogError("NetworkPrefab registry error: Requested prefab ID does not exist.");
-            return false;
-        }
-        GameObject g = Instantiate(networkPrefabs[i.GetPrefabID()]);
-        IdentityContainer c = g.GetComponent<IdentityContainer>();
-        if(c == null) {
-            Debug.LogError("NetworkPrefab error: spawned prefab does not contain IdentityContainer");
-            return false;
-        }
-        c.SetIdentity(i);
-        database.AddObject(i);
-    }
+    
 
 
     #region Provider-oriented code
 
     public void HostGame() {
+        //Construct the network database. Very important!
+        MeshNetworkIdentity databaseID = new MeshNetworkIdentity((ushort)ReservedObjectIDs.DatabaseObject, 
+            (ushort)ReservedPrefabIDs.Database, 
+            (ulong)GetSteamID());
+
+        database = game.SpawnObject(databaseID).GetComponent<NetworkDatabase>(); //Spawns the database prefab.
+        database.AddObject(databaseID); //Tells the database that it itself exists (funny)
+        
         //First, we get our own player object, and we make ourselves the provider.
         Player me = ConstructPlayer(SteamUser.GetSteamID());
         database.AddPlayer(me);
@@ -162,6 +155,29 @@ public class MeshNetwork : MonoBehaviour {
 
     }
 
+    public void InitializeDatabaseClientside(MeshPacket p) {
+        DatabaseUpdate u = DatabaseUpdate.ParseContentAsDatabaseUpdate(p.GetContents());
+        //Here, we construct the database shadow using the database update.
+        bool flagHasFoundDatabase = false;
+        MeshNetworkIdentity databaseID = null;
+        foreach(MeshNetworkIdentity i in u.objectDelta.Keys) {
+            if(i.GetObjectID() == (ushort)ReservedObjectIDs.DatabaseObject) {
+                flagHasFoundDatabase = true;
+                database = game.SpawnObject(i).GetComponent<NetworkDatabase>(); //Spawns the database prefab.
+                databaseID = i;
+                break;
+            }
+        }
+        if(flagHasFoundDatabase == false) {
+            Debug.LogError("Database intialization packet did not contain a database!");
+            return;
+        }
+        database.AddObject(databaseID); //Tells the database that it itself exists (funny)
+
+        database.ReceivePacket(p);
+
+    }
+
     #endregion
-    
+
 }

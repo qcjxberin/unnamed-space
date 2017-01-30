@@ -19,6 +19,10 @@ namespace Utilities {
         Unspecified = 0,
         Broadcast = 1,
     }
+    public enum ReservedPrefabIDs : ushort {
+        Unspecified = 0,
+        Database = 1
+    }
 
     public enum CoordinatorStatus {
         Uninitialized,
@@ -132,7 +136,7 @@ namespace Utilities {
 
     public class MeshPacket {
 
-        private byte[] data;
+        private byte[] contents;
         private PacketType type;
         private ulong srcPlayerId;
         private ulong targetPlayerId;
@@ -142,14 +146,14 @@ namespace Utilities {
 
 
         public MeshPacket() { //if no data supplied, generate empty packet with generic typebyte
-            data = new byte[1];
+            contents = new byte[1];
             type = PacketType.Generic;
             srcPlayerId = 0;
             targetPlayerId = 0;
             srcObjectId = 0;
             targetObjectId = 0;
         }
-        public MeshPacket(byte[] serializedData) { //if data supplied, generate packet with generic typebyte
+        public MeshPacket(byte[] serializedData) { //Deserialize packet.
             int bytesRead = 0;
             type = (PacketType)serializedData[0];
             bytesRead++;
@@ -161,20 +165,20 @@ namespace Utilities {
             bytesRead += 2;
             targetObjectId = BitConverter.ToUInt16(serializedData, 19);
             bytesRead += 2;
-            data = new byte[serializedData.Length - bytesRead];
-            Buffer.BlockCopy(serializedData, bytesRead, data, 0, data.Length);
+            contents = new byte[serializedData.Length - bytesRead];
+            Buffer.BlockCopy(serializedData, bytesRead, contents, 0, contents.Length);
 
         }
         public MeshPacket(byte[] contents, PacketType type, ulong srcPlayer, ulong targetPlayer, ushort srcObject, ushort targetObject) {
-            data = contents;
+            this.contents = contents;
             this.type = type;
             srcPlayerId = srcPlayer;
             targetPlayerId = targetPlayer;
             srcObjectId = srcObject;
             targetObjectId = targetObject;
         }
-        public byte[] GetData() {
-            return data;
+        public byte[] GetContents() {
+            return contents;
         }
 
         public void SetPacketType(PacketType p) {
@@ -183,8 +187,8 @@ namespace Utilities {
         public PacketType GetPacketType() {
             return type;
         }
-        public void SetData(byte[] data) {
-            this.data = data;
+        public void SetContents(byte[] contents) {
+            this.contents = contents;
         }
         public ulong GetSourcePlayerId() {
             return srcPlayerId;
@@ -220,7 +224,7 @@ namespace Utilities {
             output.AddRange(BitConverter.GetBytes(targetPlayerId));
             output.AddRange(BitConverter.GetBytes(srcObjectId));
             output.AddRange(BitConverter.GetBytes(targetObjectId));
-            output.AddRange(data);
+            output.AddRange(contents);
 
             return output.ToArray();
         }
@@ -337,6 +341,7 @@ namespace Utilities {
     }
     public interface INetworked<MeshNetworkIdentity> {
         MeshNetworkIdentity GetIdentity();
+        void SetIdentity(MeshNetworkIdentity id);
     }
 
     public class Testing {
@@ -366,7 +371,7 @@ namespace Utilities {
             p.SetSourcePlayerId(120);
             p.SetTargetObjectId((byte)ReservedObjectIDs.DatabaseObject);
             p.SetTargetPlayerId((byte)ReservedPlayerIDs.Broadcast);
-            p.SetData(db.GetSerializedBytes());
+            p.SetContents(db.GetSerializedBytes());
             
             byte[] transmitData = p.GetSerializedBytes();
 
@@ -379,9 +384,9 @@ namespace Utilities {
             Debug.Log("sourcePlayerID: " + received.GetSourcePlayerId());
             Debug.Log("targetObjectID: " + received.GetTargetObjectId());
             Debug.Log("targetPlayerID: " + received.GetTargetPlayerId());
-            Debug.Log("Payload length: " + received.GetData().Length);
+            Debug.Log("Payload length: " + received.GetContents().Length);
 
-            DatabaseUpdate receivedDB = DatabaseUpdate.ParseContentAsDatabaseUpdate(received.GetData());
+            DatabaseUpdate receivedDB = DatabaseUpdate.ParseContentAsDatabaseUpdate(received.GetContents());
             Debug.Log("Received DatabaseUpdate:");
             //Debug.Log("Database hash: " + NetworkDatabase.GenerateDatabaseChecksum(db.playerDelta, db.objectDelta));
             Debug.Log("Total number of objects: " + receivedDB.objectDelta.Count);

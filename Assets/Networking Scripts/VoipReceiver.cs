@@ -64,7 +64,7 @@ public class VoipReceiver : MonoBehaviour, IReceivesPacket<MeshPacket> {
             Debug.LogError("PACKET TYPE MISMATCH");
             return;
         }
-        byte[] data = new byte[p.GetData().Length];
+        byte[] data = new byte[p.GetContents().Length];
 
 
         Debug.Log("Voip recieved " + data.Length + " samples of audio");

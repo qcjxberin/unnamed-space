@@ -24,7 +24,7 @@ public class MeshEndpoint:MonoBehaviour {
     */
 
     public string shout;
-    public NetworkDatabase ndb;
+    public MeshNetwork meshnet;
 
     List<MeshPacket> failedPackets = new List<MeshPacket>();
     Dictionary<MeshPacket, int> packetRetries = new Dictionary<MeshPacket, int>();
@@ -55,22 +55,31 @@ public class MeshEndpoint:MonoBehaviour {
     void ParseData(MeshPacket incomingPacket) {
 
         if(incomingPacket.GetPacketType() == PacketType.PlayerJoin) {
+            if(meshnet.database == null) {
+                Debug.LogError("Database not intialized yet!");
+            }
             CSteamID sID = new CSteamID(incomingPacket.GetSourcePlayerId());
             Player p = new Player();
             p.SetName(SteamFriends.GetFriendPersonaName(sID));
             p.SetUniqueID(sID.m_SteamID);
             p.SetPrivateKey("key"); //#cybersecurity
-            ndb.AddPlayer(new Player());
+            meshnet.database.AddPlayer(new Player());
+        }else if(incomingPacket.GetPacketType() == PacketType.DatabaseUpdate) {
+            if(meshnet.database == null) {
+                Debug.Log("Received first database update, no database to send it to.");
+                Debug.Log("Rerouting to MeshNetwork.");
+                meshnet.InitializeDatabaseClientside(incomingPacket);
+            }
         }
 
 
-        Player source = ndb.LookupPlayer(incomingPacket.GetSourcePlayerId()); //retrieve which player sent this packet
+        Player source = meshnet.database.LookupPlayer(incomingPacket.GetSourcePlayerId()); //retrieve which player sent this packet
         if (source == null) { //hmmm, the NBD can't find the player
             Debug.LogError("Player from which packet originated does not exist on local NDB.");
             return;
         }
 
-        MeshNetworkIdentity targetObject = ndb.LookupObject(incomingPacket.GetTargetObjectId());
+        MeshNetworkIdentity targetObject = meshnet.database.LookupObject(incomingPacket.GetTargetObjectId());
         if (targetObject == null) {
             Debug.LogError("Packet's target object doesn't exist on the database!");
             return;
@@ -85,12 +94,12 @@ public class MeshEndpoint:MonoBehaviour {
     public void Send(MeshPacket packet) {
         byte[] data = packet.GetSerializedBytes();
         if (packet.GetTargetPlayerId() == (byte)ReservedPlayerIDs.Broadcast) {
-            foreach (Player p in ndb.GetAllPlayers()) {
+            foreach (Player p in meshnet.database.GetAllPlayers()) {
                 SteamNetworking.SendP2PPacket(new CSteamID(p.GetUniqueID()), data, (uint)data.Length, packet.qos);
             }
         }
         else {
-            Player target = ndb.LookupPlayer(packet.GetTargetPlayerId());
+            Player target = meshnet.database.LookupPlayer(packet.GetTargetPlayerId());
             SteamNetworking.SendP2PPacket(new CSteamID(target.GetUniqueID()), data, (uint)data.Length, packet.qos);
         }
         

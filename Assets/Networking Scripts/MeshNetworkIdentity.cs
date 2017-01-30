@@ -41,7 +41,16 @@ public class MeshNetworkIdentity : IReceivesPacket<MeshPacket>, IMeshSerializabl
     //attached to the relevant object will wind up in this List<>.
     public List<IReceivesPacket<MeshPacket>> attachedComponents;
 
-    
+    public MeshNetworkIdentity(ushort objectID, ushort prefabID, ulong ownerID) {
+        this.objectID = objectID;
+        this.prefabID = prefabID;
+        this.ownerID = ownerID;
+    }
+    public MeshNetworkIdentity() {
+        this.objectID = (ushort)ReservedObjectIDs.Unspecified;
+        this.prefabID = (ushort)ReservedPrefabIDs.Unspecified;
+        this.ownerID = (ulong)ReservedPlayerIDs.Unspecified;
+    }
 
     public void ReceivePacket(MeshPacket p) {
         if(attachedComponents.Count == 0) {
