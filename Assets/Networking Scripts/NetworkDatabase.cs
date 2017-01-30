@@ -31,8 +31,8 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     private Dictionary<ulong, Player> playerList = new Dictionary<ulong, Player>();
     private Dictionary<ushort, MeshNetworkIdentity> objectList = new Dictionary<ushort, MeshNetworkIdentity>();
 
-    private Dictionary<ulong, Player> playerListDelta = new Dictionary<ulong, Player>();
-    private Dictionary<ushort, MeshNetworkIdentity> objectListDelta = new Dictionary<ushort, MeshNetworkIdentity>();
+    private Dictionary<Player, StateChange> playerListDelta = new Dictionary<Player, StateChange>();
+    private Dictionary<MeshNetworkIdentity, StateChange> objectListDelta = new Dictionary<MeshNetworkIdentity, StateChange>();
 
 
     //Entirely destroy the database records.
@@ -100,22 +100,48 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         return output;
     }
     
-    private void FlagChange(Player p) {
-        playerListDelta.Add(p.GetUniqueID(), p);
+    private void FlagRemoval(Player p) {
+        if (playerListDelta.ContainsKey(p)) {
+            if(playerListDelta[p] != StateChange.Removal) {
+                playerListDelta.Remove(p);
+            }
+        }
+        else {
+            playerListDelta.Add(p, StateChange.Removal);
+        }
+        
     }
-    private void FlagChange(MeshNetworkIdentity i) {
-        objectListDelta.Add(i.GetObjectID(), i);
+    private void FlagAddition(Player p) {
+        if (playerListDelta.ContainsKey(p)) {
+            if (playerListDelta[p] != StateChange.Addition) {
+                playerListDelta.Remove(p);
+            }
+        }
+        else {
+            playerListDelta.Add(p, StateChange.Removal);
+        }
+
     }
     public void ProcessUpdate() {
         SendDelta(playerListDelta, objectListDelta);
     }
     
+
+
     public static ushort GenerateDatabaseChecksum(Dictionary<ulong, Player> playerList,
         Dictionary<ushort, MeshNetworkIdentity> objectList) {
 
         //Always use zero for the hash when we create this dummy container.
         //Otherwise we'd be hashing a hash!
-        DatabaseUpdate container = new DatabaseUpdate(playerList, objectList, 0);
+        Dictionary<Player, StateChange> fakePlayerDelta = new Dictionary<Player, StateChange>();
+        foreach(Player p in playerList.Values) {
+            fakePlayerDelta.Add(p, StateChange.Change);
+        }
+        Dictionary<MeshNetworkIdentity, StateChange> fakeObjectDelta = new Dictionary<MeshNetworkIdentity, StateChange>();
+        foreach(MeshNetworkIdentity m in objectList.Values) {
+            fakeObjectDelta.Add(m, StateChange.Change);
+        }
+        DatabaseUpdate container = new DatabaseUpdate(fakePlayerDelta, fakeObjectDelta, 0);
         byte[] data = container.GetSerializedBytes();
         ushort checksum = 0;
         foreach (byte cur_byte in data) {
@@ -125,7 +151,7 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         return checksum;
     }
 
-    private void SendDelta(Dictionary<ulong, Player> playerUpdate, Dictionary<ushort, MeshNetworkIdentity> objectUpdate) {
+    private void SendDelta(Dictionary<Player, StateChange> playerUpdate, Dictionary<MeshNetworkIdentity, StateChange> objectUpdate) {
         MeshPacket p = new MeshPacket();
         p.SetPacketType(PacketType.DatabaseUpdate);
         p.qos = EP2PSend.k_EP2PSendReliable;

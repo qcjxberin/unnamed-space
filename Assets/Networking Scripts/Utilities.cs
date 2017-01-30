@@ -50,6 +50,12 @@ namespace Utilities {
         Pending, Connected, Disconnected
     }
 
+    public enum StateChange:byte {
+        Addition = 0,
+        Removal = 1,
+        Change = 2
+    }
+
     public struct GameInfo {
         public string name;
         public string password;
@@ -227,49 +233,50 @@ namespace Utilities {
     public class DatabaseUpdate {
 
         //These dictionaries are treated as deltas (why send the entire database?)
-        public Dictionary<ulong, Player> playerList = new Dictionary<ulong, Player>();
-        public Dictionary<ushort, MeshNetworkIdentity> objectList = new Dictionary<ushort, MeshNetworkIdentity>();
+        public Dictionary<Player, StateChange> playerDelta = new Dictionary<Player, StateChange>();
+        public Dictionary<MeshNetworkIdentity, StateChange> objectDelta = new Dictionary<MeshNetworkIdentity, StateChange>();
         public ushort fullHash;
 
         public DatabaseUpdate() {
-            playerList = new Dictionary<ulong, Player>();
-            objectList = new Dictionary<ushort, MeshNetworkIdentity>();
+            playerDelta = new Dictionary<Player, StateChange>();
+            objectDelta = new Dictionary<MeshNetworkIdentity, StateChange>();
             fullHash = 0;
         }
 
-        public DatabaseUpdate(Dictionary<ulong, Player> players,
-            Dictionary<ushort, MeshNetworkIdentity> objects,
+        public DatabaseUpdate(Dictionary<Player, StateChange> players,
+            Dictionary<MeshNetworkIdentity, StateChange> objects,
             ushort databaseHash) {
-
-            playerList = players;
-            objectList = objects;
+            
+            playerDelta = players;
+            objectDelta = objects;
             fullHash = databaseHash;
         }
         
 
         public void DeserializeAndApply(byte[] serializedData) {
             DatabaseUpdate decoded = DatabaseUpdate.ParseContentAsDatabaseUpdate(serializedData);
-            this.playerList = decoded.playerList;
-            this.objectList = decoded.objectList;
-            
+            this.playerDelta = decoded.playerDelta;
+            this.objectDelta = decoded.objectDelta;
         }
 
         public byte[] GetSerializedBytes() {
             List<byte> output = new List<byte>();
             
 
-            byte numPlayers = (byte)playerList.Keys.Count;
+            byte numPlayers = (byte)playerDelta.Keys.Count;
             output.Add(numPlayers);
-            foreach (ulong playerID in playerList.Keys) {
-                byte[] serializedPlayer = playerList[playerID].SerializeFull();
+            foreach (Player p in playerDelta.Keys) {
+                byte[] serializedPlayer = p.SerializeFull();
                 output.Add((byte)serializedPlayer.Length);
                 output.AddRange(serializedPlayer);
+                output.Add((byte)playerDelta[p]);
             }
-            byte numObjects = (byte)objectList.Keys.Count;
+            byte numObjects = (byte)objectDelta.Keys.Count;
             output.Add(numObjects);
-            foreach(ushort objectID in objectList.Keys) {
-                byte[] serializedObject = objectList[objectID].GetSerializedBytes();
+            foreach(MeshNetworkIdentity m in objectDelta.Keys) {
+                byte[] serializedObject = m.GetSerializedBytes();
                 output.AddRange(serializedObject);
+                output.Add((byte)objectDelta[m]);
             }
             output.AddRange(BitConverter.GetBytes(fullHash));
             return output.ToArray();
@@ -277,8 +284,8 @@ namespace Utilities {
 
         public static DatabaseUpdate ParseContentAsDatabaseUpdate(byte[] serializedData) {
 
-            Dictionary<ulong, Player> playerList = new Dictionary<ulong, Player>();
-            Dictionary<ushort, MeshNetworkIdentity> networkObjects = new Dictionary<ushort, MeshNetworkIdentity>();
+            Dictionary<Player, StateChange> playerList = new Dictionary<Player, StateChange>();
+            Dictionary<MeshNetworkIdentity, StateChange> networkObjects = new Dictionary<MeshNetworkIdentity, StateChange>();
 
             byte[] rawData = serializedData;
             byte numOfNewPlayers = rawData[0];
@@ -292,9 +299,10 @@ namespace Utilities {
                 byte[] playerData = new byte[blobLength];
                 Buffer.BlockCopy(rawData, pointer, playerData, 0, blobLength);
                 Player p = Player.DeserializeFull(playerData);
-                playerList.Add(p.GetUniqueID(), p);
-
-                pointer += blobLength; //pointer now at the byte after the player data blob
+                pointer += blobLength;
+                StateChange s = (StateChange)rawData[pointer];
+                playerList.Add(p, s);
+                pointer++;
                 i++;
             }
             byte numOfObjects = rawData[pointer];
@@ -306,8 +314,10 @@ namespace Utilities {
                 byte[] trimmed = new byte[MeshNetworkIdentity.NETWORK_IDENTITY_BYTE_SIZE];
                 Buffer.BlockCopy(rawData, pointer, trimmed, 0, trimmed.Length);
                 netid.DeserializeAndApply(trimmed);
-                networkObjects.Add(netid.GetObjectID(), netid);
-                pointer += MeshNetworkIdentity.NETWORK_IDENTITY_BYTE_SIZE; //pointer now at the byte after
+                pointer += MeshNetworkIdentity.NETWORK_IDENTITY_BYTE_SIZE;
+                StateChange s = (StateChange)rawData[pointer];
+                networkObjects.Add(netid, s);
+                pointer++;
                 j++;
             }
             ushort hash = BitConverter.ToUInt16(rawData, pointer);
@@ -337,19 +347,19 @@ namespace Utilities {
             Player p2 = new Player("John Smith", 52342342, "12345");
 
             DatabaseUpdate db = new DatabaseUpdate();
-            db.playerList.Add(p1.GetUniqueID(), p1);
-            db.playerList.Add(p2.GetUniqueID(), p2);
+            db.playerDelta.Add(p1, StateChange.Addition);
+            db.playerDelta.Add(p2, StateChange.Removal);
 
             dummy1.SetObjectID(1337);
             dummy1.SetOwnerID(1234);
             dummy2.SetObjectID(4200);
             dummy2.SetOwnerID(4321);
 
-            db.objectList.Add(dummy1.GetObjectID(), dummy1);
-            db.objectList.Add(dummy2.GetObjectID(), dummy2);
+            db.objectDelta.Add(dummy1, StateChange.Change);
+            db.objectDelta.Add(dummy2, StateChange.Addition);
 
             Debug.Log("Total payload length: " + db.GetSerializedBytes().Length);
-            Debug.Log("Database hash: " + NetworkDatabase.GenerateDatabaseChecksum(db.playerList, db.objectList));
+            Debug.Log("Database hash: " + NetworkDatabase.GenerateDatabaseChecksum(db.playerDelta, db.objectDelta));
             MeshPacket p = new MeshPacket();
             p.SetPacketType(PacketType.DatabaseUpdate);
             p.SetSourceObjectId((byte)ReservedObjectIDs.DatabaseObject);
