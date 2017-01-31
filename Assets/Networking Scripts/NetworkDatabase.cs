@@ -30,7 +30,8 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     //Serialized below here.
     private Dictionary<ulong, Player> playerList = new Dictionary<ulong, Player>();
     private Dictionary<ushort, MeshNetworkIdentity> objectList = new Dictionary<ushort, MeshNetworkIdentity>();
-    
+    public Player[] threadsafePlayerList = new Player[0];
+    public MeshNetworkIdentity[] threadSafeObjectList = new MeshNetworkIdentity[0];
 
     //Entirely destroy the database records.
     //For obvious reasons, try avoid doing this unless you know what you're doing.
@@ -46,7 +47,7 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         thisObjectIdentity = id;
     }
 
-    private bool determineProvider() {
+    public bool GetAuthorized() {
         if (meshnet.GetSteamID() == GetIdentity().GetOwnerID()) {
             return true;
         }
@@ -56,16 +57,21 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     }
 
     public void AddPlayer(Player p) {
+
         if (playerList.ContainsKey(p.GetUniqueID())) {
             Debug.LogError("User already exists!");
             return;
         }
-        if(p.GetUniqueID() == GetIdentity().GetOwnerID() && p.GetUniqueID() != (ulong)ReservedPlayerIDs.Unspecified) {
-            Debug.LogError("New user trying to override current provider. Hotswap not yet implemented.");
-            return;
+        if (p.GetUniqueID() == GetIdentity().GetOwnerID() && p.GetUniqueID() != (ulong)ReservedPlayerIDs.Unspecified) {
+            if (!GetAuthorized()) {
+                Debug.Log("Unauthorized user trying to override provider.");
+            }
+
         }
-        playerList.Add(p.GetUniqueID(), p);
-        if(meshnet.GetSteamID() == GetIdentity().GetOwnerID()) {
+        ulong uniqueID = p.GetUniqueID();
+        playerList.Add(uniqueID, p);
+        if (GetAuthorized()) {
+            Debug.Log("Sending player update");
             SendPlayerUpdate(p, StateChange.Addition);
         }
     }
@@ -80,7 +86,9 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
             return;
         }
         playerList.Remove(p.GetUniqueID());
-        if(meshnet.GetSteamID() =)
+        if (GetAuthorized()) {
+            SendPlayerUpdate(p, StateChange.Removal);
+        }
     }
 
     public void ChangePlayer(Player p) {
@@ -88,6 +96,14 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
             Debug.LogError("Trying to modify player object that doesn't exist here!");
             return;
         }
+        if (p.GetUniqueID() == GetIdentity().GetOwnerID() && p.GetUniqueID() != (ulong)ReservedPlayerIDs.Unspecified) {
+            Debug.LogError("Trying to modify provider. This isn't supposed to happen.");
+            return;
+        }
+        playerList[p.GetUniqueID()] = p;
+        if (GetAuthorized()) {
+            SendPlayerUpdate(p, StateChange.Change);
+        } 
     }
 
     public void AddObject(MeshNetworkIdentity i) {
@@ -95,8 +111,11 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
             Debug.LogError("Object already exists!");
             return;
         }
+        if(i.GetObjectID() == (ushort)ReservedObjectIDs.DatabaseObject) {
+            Debug.Log("Creating database object. This should only happen once!");
+        }
         objectList.Add(i.GetObjectID(), i);
-        if (meshnet.GetSteamID() == GetIdentity().GetOwnerID()) {
+        if (GetAuthorized()) {
             SendObjectUpdate(i, StateChange.Addition);
         }
     }
@@ -104,14 +123,29 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         if(objectList.ContainsKey(i.GetObjectID()) == false) {
             Debug.LogError("Object that was requested to be removed does not exist!");
         }
+        if(i.GetObjectID() == (ushort)ReservedObjectIDs.DatabaseObject) {
+            Debug.LogError("Tried to remove database. Bad idea.");
+            return;
+        }
+        objectList.Remove(i.GetObjectID());
+        if (GetAuthorized()) {
+            SendObjectUpdate(i, StateChange.Removal);
+        }
     }
-
-    public Player LookupPlayer(byte byteID) {
-        if (playerList.ContainsKey(byteID))
-            return playerList[byteID];
-        else
-            return null;
+    public void ChangeObject(MeshNetworkIdentity i) {
+        if (objectList.ContainsKey(i.GetObjectID()) == false) {
+            Debug.LogError("Object that was requested to be changed does not exist!");
+        }
+        if (i.GetObjectID() == (ushort)ReservedObjectIDs.DatabaseObject) {
+            Debug.LogError("Tried to change database. This action is prohibited.");
+            return;
+        }
+        objectList.Remove(i.GetObjectID());
+        if (GetAuthorized()) {
+            SendObjectUpdate(i, StateChange.Change);
+        }
     }
+    
 
     public Player LookupPlayer(ulong id) {
         foreach(Player p in playerList.Values) {
@@ -131,9 +165,11 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     }
 
     public Player[] GetAllPlayers() {
-        Player[] output = new Player[0];
+        Debug.Log("getting all players");
+        Player[] output = new Player[playerList.Count];
         playerList.Values.CopyTo(output, 0);
         return output;
+        
     }
     
     private void SendPlayerUpdate(Player p, StateChange s) {
@@ -208,7 +244,18 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
             }else if(dbup.playerDelta[p] == StateChange.Removal) {
                 RemovePlayer(p);
             }else if(dbup.playerDelta[p] == StateChange.Change) {
-                UpdatePlayer(p);
+                ChangePlayer(p);
+            }
+        }
+        foreach (MeshNetworkIdentity i in dbup.objectDelta.Keys) {
+            if (dbup.objectDelta[i] == StateChange.Addition) {
+                AddObject(i);
+            }
+            else if (dbup.objectDelta[i] == StateChange.Removal) {
+                RemoveObject(i);
+            }
+            else if (dbup.objectDelta[i] == StateChange.Change) {
+                ChangeObject(i);
             }
         }
     }

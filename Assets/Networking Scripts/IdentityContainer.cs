@@ -5,6 +5,7 @@ using Utilities;
 
 public class IdentityContainer : MonoBehaviour {
 
+    
     private MeshNetworkIdentity identity;
 
     public void PopulateComponents() {

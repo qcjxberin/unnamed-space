@@ -113,4 +113,11 @@ public class UIController : MonoBehaviour {
     public void PasswordCallback(string pwd) {
         PasswordDelegate(pwd);
     }
+
+    public void GameSetupCallback(string gameName, string pwd) {
+        GameInfo g = new GameInfo();
+        g.name = gameName;
+        g.password = pwd;
+        HostingInfoDelegate(g);
+    }
 }

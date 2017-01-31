@@ -5,13 +5,14 @@ using Steamworks;
 using Utilities;
 
 [RequireComponent(typeof(UIController))]
+[RequireComponent(typeof(GameCoordinator))]
 public class MeshNetwork : MonoBehaviour {
     UIController networkUIController;
     public NetworkDatabase database;
-    GameCoordinator game;
+    public GameCoordinator game;
     MeshEndpoint endpoint;
     //Current lobby
-    CSteamID lobby;
+    CSteamID lobby = CSteamID.Nil;
 
     //Steamworks callbacks/callresults
     CallResult<LobbyCreated_t> m_LobbyCreated;
@@ -21,14 +22,16 @@ public class MeshNetwork : MonoBehaviour {
     
 
     void Start() {
-        Debug.Log("hello!");
+
+        DontDestroyOnLoad(gameObject);
+
         //Testing.DebugDatabaseSerialization(gameObject.AddComponent<MeshNetworkIdentity>(), gameObject.AddComponent<MeshNetworkIdentity>());
         networkUIController = gameObject.GetComponent<UIController>();
 
         
         endpoint = gameObject.AddComponent<MeshEndpoint>();
         endpoint.meshnet = this;
-        game = gameObject.AddComponent<GameCoordinator>();
+        game = gameObject.GetComponent<GameCoordinator>();
         
         if (SteamManager.Initialized) {
             m_LobbyCreated = CallResult<LobbyCreated_t>.Create(OnCreateLobby);
@@ -37,6 +40,12 @@ public class MeshNetwork : MonoBehaviour {
         else {
             Debug.LogError("SteamManager not initialized!");
         }
+
+        Dictionary<int, float> test = new Dictionary<int, float>();
+        test.Add(5, 3.5f);
+        float[] arr = new float[1];
+        test.Values.CopyTo(arr, 0);
+        
     }
     
     //Create a networked player given SteamID information.
@@ -63,26 +72,39 @@ public class MeshNetwork : MonoBehaviour {
         endpoint.Send(p);
     }
 
-    
+    public void OnApplicationExit() {
+        if(!lobby.Equals(CSteamID.Nil))
+            SteamMatchmaking.LeaveLobby(lobby);
+    }
     
 
 
     #region Provider-oriented code
 
     public void HostGame() {
+        Debug.Log("Beginning game hosting");
+        if(lobby.Equals(CSteamID.Nil) == false) {
+            Debug.LogError("Lobby already created. Probably already hosting. Must shut down hosting before doing it again.");
+            return;
+        }
+
         //Construct the network database. Very important!
         MeshNetworkIdentity databaseID = new MeshNetworkIdentity((ushort)ReservedObjectIDs.DatabaseObject, 
             (ushort)ReservedPrefabIDs.Database, 
             (ulong)GetSteamID());
 
         database = game.SpawnObject(databaseID).GetComponent<NetworkDatabase>(); //Spawns the database prefab.
+        database.meshnet = this;
+        Debug.Log("Registering database.");
         database.AddObject(databaseID); //Tells the database that it itself exists (funny)
         
         //First, we get our own player object, and we make ourselves the provider.
         Player me = ConstructPlayer(SteamUser.GetSteamID());
+        Debug.Log("Registering provider.");
         database.AddPlayer(me);
 
         //Actually create the lobby. Password info, etc, will be set after this.
+        Debug.Log("Creating Lobby");
         m_LobbyCreated.Set(SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypePrivate, 4));
     }
     public void OnCreateLobby(LobbyCreated_t pCallback, bool bIOFailure) {
@@ -90,13 +112,14 @@ public class MeshNetwork : MonoBehaviour {
             Debug.LogError("Lobby creation didn't work.");
             return;
         }
+        Debug.Log("Successfully created lobby.");
         lobby = new CSteamID(pCallback.m_ulSteamIDLobby);
         //Then, we switch the server UI so that the player can enter the information.
         //The UI has buttons that contain references to various callbacks here.
         networkUIController.RequestHostingInfo(OnGetHostingInfo);
     }
     public void OnGetHostingInfo(GameInfo info) {
-
+        Debug.Log("Received hosting information!");
         //Set basic info
         SteamMatchmaking.SetLobbyData(lobby, "name", info.name);
         SteamMatchmaking.SetLobbyData(lobby, "pwd", info.password);
@@ -112,6 +135,10 @@ public class MeshNetwork : MonoBehaviour {
     #region Client-oriented code
 
     public void JoinGame() {
+        if(lobby != null) {
+            Debug.LogError("Trying to join a game when already connected! This won't work.");
+            return;
+        }
         //First, we need the UI to show the player the available lobbies.
         networkUIController.RequestLobbySelection(OnGetLobbySelection);
     }
@@ -156,6 +183,12 @@ public class MeshNetwork : MonoBehaviour {
     }
 
     public void InitializeDatabaseClientside(MeshPacket p) {
+
+        if(database.Equals(CSteamID.Nil) == false) {
+            Debug.LogError("Database already exists. InitializeDatabaseClientside prohibited.");
+            return;
+        }
+
         DatabaseUpdate u = DatabaseUpdate.ParseContentAsDatabaseUpdate(p.GetContents());
         //Here, we construct the database shadow using the database update.
         bool flagHasFoundDatabase = false;
@@ -168,8 +201,8 @@ public class MeshNetwork : MonoBehaviour {
                 break;
             }
         }
-        if(flagHasFoundDatabase == false) {
-            Debug.LogError("Database intialization packet did not contain a database!");
+        if(flagHasFoundDatabase == false || database == null) {
+            Debug.LogError("Database intialization failed.");
             return;
         }
         database.AddObject(databaseID); //Tells the database that it itself exists (funny)

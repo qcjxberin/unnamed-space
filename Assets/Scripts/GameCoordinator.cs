@@ -2,13 +2,35 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Steamworks;
+using Utilities;
 
+[RequireComponent(typeof(MeshNetwork))]
 public class GameCoordinator : MonoBehaviour {
 
     public MeshNetwork meshnet;
 
     //Network Prefab Registry
     Dictionary<ushort, GameObject> networkPrefabs = new Dictionary<ushort, GameObject>();
+
+    public void Start() {
+        DontDestroyOnLoad(gameObject);
+        meshnet = gameObject.GetComponent<MeshNetwork>();
+        GameObject[] prefabs = Resources.LoadAll<GameObject>("NetworkPrefabs");
+        
+        foreach(GameObject prefab in prefabs) {
+            if(prefab.GetComponent<IdentityContainer>() == null) {
+                Debug.LogError("A NetworkPrefab is missing an IdentityContainer.");
+            }
+            else{
+                string prefabID = prefab.name.Substring(prefab.name.LastIndexOf('_') + 1);
+                networkPrefabs.Add(ushort.Parse(prefabID), prefab);
+            }
+        }
+
+
+        Debug.Log("GameCoordinator tried to register " + prefabs.Length + " network prefabs, succeeded with " + networkPrefabs.Count + ".");
+        
+    }
 
     public void EnterGame(CSteamID lobbyID) {
         return;
@@ -18,7 +40,7 @@ public class GameCoordinator : MonoBehaviour {
     //Intended functionality is that this method is called by the the procedure
     //that has already registered this MeshNetworkIdentity on the database.
     public GameObject SpawnObject(MeshNetworkIdentity i) {
-
+        
         if (networkPrefabs.ContainsKey(i.GetPrefabID()) == false) {
             Debug.LogError("NetworkPrefab registry error: Requested prefab ID does not exist.");
             return null;

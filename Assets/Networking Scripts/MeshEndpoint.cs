@@ -40,6 +40,7 @@ public class MeshEndpoint:MonoBehaviour {
 
         uint bufferLength = 0;
         if (SteamNetworking.IsP2PPacketAvailable(out bufferLength)) {
+            Debug.Log("Receiving Packet");
             byte[] destBuffer = new byte[bufferLength];
             UInt32 bytesRead = 0;
             CSteamID remoteID;
@@ -93,8 +94,9 @@ public class MeshEndpoint:MonoBehaviour {
     
     public void Send(MeshPacket packet) {
         byte[] data = packet.GetSerializedBytes();
+        Player[] allPlayers = meshnet.database.GetAllPlayers();
         if (packet.GetTargetPlayerId() == (byte)ReservedPlayerIDs.Broadcast) {
-            foreach (Player p in meshnet.database.GetAllPlayers()) {
+            foreach (Player p in allPlayers) {
                 SteamNetworking.SendP2PPacket(new CSteamID(p.GetUniqueID()), data, (uint)data.Length, packet.qos);
             }
         }
