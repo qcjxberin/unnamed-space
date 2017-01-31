@@ -46,6 +46,15 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         thisObjectIdentity = id;
     }
 
+    private bool determineProvider() {
+        if (meshnet.GetSteamID() == GetIdentity().GetOwnerID()) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
     public void AddPlayer(Player p) {
         if (playerList.ContainsKey(p.GetUniqueID())) {
             Debug.LogError("User already exists!");
@@ -61,6 +70,26 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         }
     }
 
+    public void RemovePlayer(Player p) {
+        if(playerList.ContainsKey(p.GetUniqueID()) == false) {
+            Debug.LogError("User that was requested to be removed does not exist!");
+            return;
+        }
+        if (p.GetUniqueID() == GetIdentity().GetOwnerID() && p.GetUniqueID() != (ulong)ReservedPlayerIDs.Unspecified) {
+            Debug.LogError("Trying to delete provider. This definitely isn't supposed to happen.");
+            return;
+        }
+        playerList.Remove(p.GetUniqueID());
+        if(meshnet.GetSteamID() =)
+    }
+
+    public void ChangePlayer(Player p) {
+        if(playerList.ContainsKey(p.GetUniqueID()) == false) {
+            Debug.LogError("Trying to modify player object that doesn't exist here!");
+            return;
+        }
+    }
+
     public void AddObject(MeshNetworkIdentity i) {
         if (objectList.ContainsKey(i.GetObjectID())) {
             Debug.LogError("Object already exists!");
@@ -69,6 +98,11 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         objectList.Add(i.GetObjectID(), i);
         if (meshnet.GetSteamID() == GetIdentity().GetOwnerID()) {
             SendObjectUpdate(i, StateChange.Addition);
+        }
+    }
+    public void RemoveObject(MeshNetworkIdentity i) {
+        if(objectList.ContainsKey(i.GetObjectID()) == false) {
+            Debug.LogError("Object that was requested to be removed does not exist!");
         }
     }
 
@@ -172,19 +206,9 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
             if(dbup.playerDelta[p] == StateChange.Addition) {
                 AddPlayer(p);
             }else if(dbup.playerDelta[p] == StateChange.Removal) {
-                if (playerList.ContainsKey(p.GetUniqueID())) {
-                    //RemovePlayer(p);
-                }
-                else {
-                    Debug.Log("Removal request for player that doesn't exist.");
-                }
+                RemovePlayer(p);
             }else if(dbup.playerDelta[p] == StateChange.Change) {
-                if (playerList.ContainsKey(p.GetUniqueID())) {
-                    playerList[p.GetUniqueID()] = p;
-                }
-                else {
-                    Debug.Log("Removal request for player that doesn't exist.");
-                }
+                UpdatePlayer(p);
             }
         }
     }
