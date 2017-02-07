@@ -30,6 +30,11 @@ public class MeshEndpoint:MonoBehaviour {
     Dictionary<MeshPacket, int> packetRetries = new Dictionary<MeshPacket, int>();
 
     //Checks for packets from all servers.
+
+
+    public void Update() {
+        Receive();
+    }
     public void Receive() {
         if (failedPackets.Count > 0) {
             MeshPacket p = failedPackets[0];
@@ -55,24 +60,35 @@ public class MeshEndpoint:MonoBehaviour {
     
     void ParseData(MeshPacket incomingPacket) {
 
+        if(incomingPacket.GetSourcePlayerId() == SteamUser.GetSteamID().m_SteamID) {
+            Debug.Log("Discarding packet from self");
+            return;
+        }
+
+
         if(incomingPacket.GetPacketType() == PacketType.PlayerJoin) {
             if(meshnet.database == null) {
                 Debug.LogError("Database not intialized yet!");
+                return;
+            }
+            if(meshnet.database.GetAuthorized() == false) {
+                Debug.Log("I'm not the provider. Discarding PlayerJoin packet");
+                return;
             }
             CSteamID sID = new CSteamID(incomingPacket.GetSourcePlayerId());
-            Player p = new Player();
-            p.SetName(SteamFriends.GetFriendPersonaName(sID));
-            p.SetUniqueID(sID.m_SteamID);
-            p.SetPrivateKey("key"); //#cybersecurity
+            Player p = meshnet.ConstructPlayer(sID);
             meshnet.database.AddPlayer(new Player());
+            return;
+
         }else if(incomingPacket.GetPacketType() == PacketType.DatabaseUpdate) {
             if(meshnet.database == null) {
                 Debug.Log("Received first database update, no database to send it to.");
                 Debug.Log("Rerouting to MeshNetwork.");
                 meshnet.InitializeDatabaseClientside(incomingPacket);
+                return;
             }
         }
-
+        //if the packet is neither a PlayerJoin or a DatabaseUpdate
 
         Player source = meshnet.database.LookupPlayer(incomingPacket.GetSourcePlayerId()); //retrieve which player sent this packet
         if (source == null) { //hmmm, the NBD can't find the player
@@ -91,8 +107,15 @@ public class MeshEndpoint:MonoBehaviour {
 
     }
 
-    
+    public void SendDirectToSteamID(MeshPacket packet, CSteamID id) {
+        byte[] data = packet.GetSerializedBytes();
+        SteamNetworking.SendP2PPacket(id, data, (uint)data.Length, EP2PSend.k_EP2PSendReliable);
+    }
+
     public void Send(MeshPacket packet) {
+        if(meshnet.database == null) {
+            Debug.LogError("Trying to send packet when database does not exist.");
+        }
         byte[] data = packet.GetSerializedBytes();
         Player[] allPlayers = meshnet.database.GetAllPlayers();
         if (packet.GetTargetPlayerId() == (byte)ReservedPlayerIDs.Broadcast) {

@@ -17,10 +17,8 @@ public class MeshNetwork : MonoBehaviour {
     //Steamworks callbacks/callresults
     CallResult<LobbyCreated_t> m_LobbyCreated;
     CallResult<LobbyEnter_t> m_JoinedLobby;
-
-
-    
-
+    CallResult<LobbyMatchList_t> m_GotLobbyList;
+    Callback<P2PSessionRequest_t> m_NewUserSession;
     void Start() {
 
         DontDestroyOnLoad(gameObject);
@@ -36,6 +34,8 @@ public class MeshNetwork : MonoBehaviour {
         if (SteamManager.Initialized) {
             m_LobbyCreated = CallResult<LobbyCreated_t>.Create(OnCreateLobby);
             m_JoinedLobby = CallResult<LobbyEnter_t>.Create(OnJoinedLobby);
+            m_GotLobbyList = CallResult<LobbyMatchList_t>.Create(OnGotLobbyList);
+            m_NewUserSession = Callback<P2PSessionRequest_t>.Create(OnSessionRequest);
         }
         else {
             Debug.LogError("SteamManager not initialized!");
@@ -46,6 +46,25 @@ public class MeshNetwork : MonoBehaviour {
         float[] arr = new float[1];
         test.Values.CopyTo(arr, 0);
         
+    }
+
+    protected void OnSessionRequest(P2PSessionRequest_t pCallback) {
+        Debug.Log("Incoming session request");
+        if (lobby.Equals(CSteamID.Nil)) {
+            Debug.Log("User trying to send packet to us, and our lobby doesn't exist!");
+            return;
+        }
+        bool flag = false;
+        for(int i = 0; i < SteamMatchmaking.GetNumLobbyMembers(lobby); i++) {
+            if(SteamMatchmaking.GetLobbyMemberByIndex(lobby, i) == pCallback.m_steamIDRemote) {
+                flag = true;
+            }
+        }
+
+        if (flag) {
+            Debug.Log("Session request granted");
+            SteamNetworking.AcceptP2PSessionWithUser(pCallback.m_steamIDRemote);
+        }
     }
     
     //Create a networked player given SteamID information.
@@ -70,6 +89,10 @@ public class MeshNetwork : MonoBehaviour {
 
     public void RoutePacket(MeshPacket p) {
         endpoint.Send(p);
+    }
+
+    public void RoutePacketDirect(MeshPacket p, CSteamID id) {
+        endpoint.SendDirectToSteamID(p, id);
     }
 
     public void OnApplicationExit() {
@@ -118,7 +141,7 @@ public class MeshNetwork : MonoBehaviour {
         //The UI has buttons that contain references to various callbacks here.
         networkUIController.RequestHostingInfo(OnGetHostingInfo);
     }
-    public void OnGetHostingInfo(GameInfo info) {
+    public void OnGetHostingInfo(GamePublishingInfo info) {
         Debug.Log("Received hosting information!");
         //Set basic info
         SteamMatchmaking.SetLobbyData(lobby, "name", info.name);
@@ -126,7 +149,7 @@ public class MeshNetwork : MonoBehaviour {
 
         //Now that we have the password in place, we can make it public
         SteamMatchmaking.SetLobbyType(lobby, ELobbyType.k_ELobbyTypePublic);
-
+        
         game.EnterGame(lobby);
     }
 
@@ -135,33 +158,69 @@ public class MeshNetwork : MonoBehaviour {
     #region Client-oriented code
 
     public void JoinGame() {
-        if(lobby != null) {
+        if(lobby.Equals(CSteamID.Nil) == false) {
             Debug.LogError("Trying to join a game when already connected! This won't work.");
             return;
         }
         //First, we need the UI to show the player the available lobbies.
-        networkUIController.RequestLobbySelection(OnGetLobbySelection);
-    }
-    public void OnGetLobbySelection(CSteamID selectedLobby) {
-        lobby = selectedLobby;
-        SteamMatchmaking.JoinLobby(selectedLobby);
+        m_GotLobbyList.Set(SteamMatchmaking.RequestLobbyList());
+        
     }
 
-    protected void OnJoinedLobby(LobbyEnter_t pCallback, bool bIOfailure) {
+    public void SearchForLobbies() {
+        Debug.Log("Searching for lobbies...");
+        m_GotLobbyList.Set(SteamMatchmaking.RequestLobbyList());
+    }
+
+    protected void OnGotLobbyList(LobbyMatchList_t pCallback, bool bIOfailure) {
+        uint numLobbies = pCallback.m_nLobbiesMatching;
+        Debug.Log(numLobbies + " lobbies found.");
+        GameMatchmakingInfo[] lobbies = new GameMatchmakingInfo[numLobbies];
+        for(int i = 0; i < numLobbies; i++) {
+            lobbies[i].id = SteamMatchmaking.GetLobbyByIndex(i).m_SteamID;
+            lobbies[i].name = SteamMatchmaking.GetLobbyData(new CSteamID(lobbies[i].id), "name");
+            Debug.Log("Name of lobby:" + lobbies[i].name);
+            lobbies[i].callback = OnGetLobbySelection;
+        }
+        networkUIController.RequestLobbySelection(OnGetLobbySelection, lobbies);
+    }
+    
+
+    public void OnGetLobbySelection(CSteamID selectedLobby) {
+        lobby = selectedLobby;
         networkUIController.RequestPassword(OnGetPassword);
+
+        
     }
 
     protected void OnGetPassword(string pwd) {
-        if(SteamMatchmaking.GetLobbyData(lobby, "pwd").Equals(pwd)) {
-            RegisterWithProvider();
+        if (SteamMatchmaking.GetLobbyData(lobby, "pwd").Equals(pwd)) {
+            m_JoinedLobby.Set(SteamMatchmaking.JoinLobby(lobby));
         }
         else {
             Debug.Log("Password doesn't match!");
-            SteamMatchmaking.LeaveLobby(lobby);
+            networkUIController.AlertPasswordMismatch();
         }
     }
 
+    protected void OnJoinedLobby(LobbyEnter_t pCallback, bool bIOfailure) {
+        if(pCallback.m_EChatRoomEnterResponse != (uint)EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess) {
+            Debug.LogError("Lobby joining failed.");
+            Debug.LogError(pCallback.m_EChatRoomEnterResponse);
+            Reset();
+            return;
+        }
+        else {
+            RegisterWithProvider();
+        }
+        
+    }
+
+    
+
     protected void RegisterWithProvider() {
+        networkUIController.SetUIMode(UIMode.Connecting);
+        Debug.Log("Registering with provider.");
 
         //Create a PlayerJoin packet, which the provider will use as a trigger to
         //register a new player. It will update its internal database, and will
@@ -174,9 +233,7 @@ public class MeshNetwork : MonoBehaviour {
             (byte)ReservedObjectIDs.DatabaseObject);
 
         p.qos = EP2PSend.k_EP2PSendReliable;
-        byte[] packetData = p.GetSerializedBytes();
-
-        RoutePacket(p);
+        RoutePacketDirect(p, new CSteamID(p.GetTargetPlayerId()));
         //Soon, we will receive a DatabaseUpdate with all of the up to date database information,
         //including our own player object!
 
@@ -213,4 +270,9 @@ public class MeshNetwork : MonoBehaviour {
 
     #endregion
 
+
+    protected void Reset() {
+        lobby = CSteamID.Nil;
+        networkUIController.SetUIMode(UIMode.Welcome);
+    }
 }

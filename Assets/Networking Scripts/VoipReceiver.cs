@@ -65,15 +65,13 @@ public class VoipReceiver : MonoBehaviour, IReceivesPacket<MeshPacket> {
             return;
         }
         byte[] data = new byte[p.GetContents().Length];
-
-
-        Debug.Log("Voip recieved " + data.Length + " samples of audio");
-      
-
-
+        Buffer.BlockCopy(p.GetContents(), 0, data, 0, data.Length);
+        
+        
         List<float> decompressedData = new List<float>();
         for (int i = 0; i < data.Length; i++) {
             short s = NAudio.Codecs.MuLawDecoder.MuLawToLinearSample(data[i]);
+            
             decompressedData.Add((s / ((float)short.MaxValue)) * volume);
         }
         //initialize input

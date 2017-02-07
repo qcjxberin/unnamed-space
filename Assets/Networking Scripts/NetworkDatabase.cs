@@ -30,8 +30,6 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     //Serialized below here.
     private Dictionary<ulong, Player> playerList = new Dictionary<ulong, Player>();
     private Dictionary<ushort, MeshNetworkIdentity> objectList = new Dictionary<ushort, MeshNetworkIdentity>();
-    public Player[] threadsafePlayerList = new Player[0];
-    public MeshNetworkIdentity[] threadSafeObjectList = new MeshNetworkIdentity[0];
 
     //Entirely destroy the database records.
     //For obvious reasons, try avoid doing this unless you know what you're doing.
@@ -57,7 +55,7 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     }
 
     public void AddPlayer(Player p) {
-
+        Debug.Log("Adding player");
         if (playerList.ContainsKey(p.GetUniqueID())) {
             Debug.LogError("User already exists!");
             return;

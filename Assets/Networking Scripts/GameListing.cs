@@ -6,13 +6,15 @@ using System;
 using Steamworks;
 
 public class GameListing : MonoBehaviour {
-    public string lobbyName;
-    public CSteamID id;
-    public Action<CSteamID> callback;
+    public GameMatchmakingInfo info;
     public UnityEngine.UI.Text label;
 	
     public void SelectGame() {
-        callback(id);
+        info.callback(new CSteamID(info.id));
+    }
+        
+    public void UpdateLabel() {
+        label.text = info.name;
     }
     
 }

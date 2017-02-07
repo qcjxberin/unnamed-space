@@ -7,8 +7,6 @@ using NAudio;
 using NAudio.Wave.SampleProviders;
 using NAudio.Wave;
 using System.IO;
-using UnityEditor.Audio;
-
 public class VoipTransmitter : MonoBehaviour {
 
     /*
@@ -117,7 +115,7 @@ public class VoipTransmitter : MonoBehaviour {
             }
 
             float[] data = new float[Mathf.Abs(newPos - lastSamplePosition)]; //holding array for 32-bit float data
-
+            
             //Retrieve appropriate microphone data into float array
 
             if (newPos <= lastSamplePosition) {
@@ -135,6 +133,7 @@ public class VoipTransmitter : MonoBehaviour {
             float avg = 0;
             for (int i = 0; i < data.Length; i++) {
                 filterOutput[i] = lowPassFilter.Transform(data[i]);
+                //filterOutput[i] = data[i];
                 avg += Mathf.Abs(filterOutput[i]);
             }
             avg /= filterOutput.Length;
@@ -144,7 +143,7 @@ public class VoipTransmitter : MonoBehaviour {
             else {
                 runningAvgCutoff += (avg - runningAvgCutoff) * 0.05f;
             }
-
+            
 
             //Saves data when not talking. silenceCutoff is user-configurable, as well as useSilenceCutoff
 
@@ -152,7 +151,7 @@ public class VoipTransmitter : MonoBehaviour {
                 lastSamplePosition = newPos;
                 return;
             }
-
+            //Debug.Log(filterOutput[0]);
 
             //Converts float data into 16 bit PCM
 
@@ -184,24 +183,18 @@ public class VoipTransmitter : MonoBehaviour {
                 compressedData.Add(NAudio.Codecs.MuLawEncoder.LinearToMuLawSample(s));
             }
 
-            //Constructs simulated packet if performing testing
-
-            byte[] simupacket = new byte[compressedData.Count + 3];
-            compressedData.CopyTo(simupacket, 3);
-
             lastSamplePosition = newPos;
 
-            Debug.Log("Transmit took " + (Time.time - statsBegin) / 1000.0f + "ms");
+            //Debug.Log("Transmit took " + (Time.time - statsBegin) / 1000.0f + "ms");
             if (Input.GetKey(KeyCode.C)) {
                 return;
             }
 
             if(debugReceiver != null) {
-
+                Debug.Log("Sending " + compressedData.Count + " bytes");
+                debugReceiver.ReceivePacket(new MeshPacket(compressedData.ToArray(), PacketType.VOIP, 0, 0, 0, 0));
             }
-
-            MeshPacket p = new MeshPacket();
-
+            
         }
     }
 
@@ -232,13 +225,12 @@ public class VoipTransmitter : MonoBehaviour {
         SOURCE_FREQUENCY = minFreq;
         DEVICE = deviceName;
         lastClip = Microphone.Start(deviceName, true, 60, SOURCE_FREQUENCY);
-
+        Debug.Log("Mic name: " + deviceName + ", freq: " + SOURCE_FREQUENCY);
 
         downsampler = new NAudio.Wave.Compression.AcmStream(new NAudio.Wave.WaveFormat(SOURCE_FREQUENCY, 16, 1), new NAudio.Wave.WaveFormat(TRANSMIT_FREQUENCY, 16, 1));
         bitreduce = new NAudio.Wave.Compression.AcmStream(new NAudio.Wave.WaveFormat(TRANSMIT_FREQUENCY, 16, 1), new NAudio.Wave.WaveFormat(TRANSMIT_FREQUENCY, 8, 1));
         lowPassFilter = NAudio.Dsp.BiQuadFilter.LowPassFilter(SOURCE_FREQUENCY, TRANSMIT_FREQUENCY * 0.5f, lowPassQuality);
-
-        g722 = new NAudio.Codecs.G722Codec();
+        
 
         Debug.Log("Channels: " + lastClip.channels);
         Debug.Log("Bitconvert is little endian? " + BitConverter.IsLittleEndian);

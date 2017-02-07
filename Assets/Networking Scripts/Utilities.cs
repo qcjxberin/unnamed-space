@@ -60,9 +60,15 @@ namespace Utilities {
         Change = 2
     }
 
-    public struct GameInfo {
+    public struct GamePublishingInfo {
         public string name;
         public string password;
+    }
+
+    public struct GameMatchmakingInfo {
+        public string name;
+        public ulong id;
+        public Action<CSteamID> callback;
     }
 
     
