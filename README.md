@@ -1,2 +1,2 @@
 # unnamed-space
-Working title.
+Showcase for true distributed P2P networking for realtime applications.
