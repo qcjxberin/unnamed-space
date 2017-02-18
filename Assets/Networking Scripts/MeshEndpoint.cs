@@ -8,22 +8,26 @@ using System.Runtime.Serialization.Formatters.Binary;
 using Utilities;
 using Steamworks;
 
-public class MeshEndpoint:MonoBehaviour {
+public class MeshEndpoint : MonoBehaviour {
 
     /*
-        ServerManager.cs
+        MeshEndpoint.cs
         Copyright 2017 Finn Sinclair
 
-        ServerManager is a container of many nodes and the main window into
-        the mesh network. All packets come and go through this script. It is
-        in charge of routing packets from various objects to the correct target
-        player, and routing packets from remote users to the correct local objects.
-        The NetworkDatabase uses the ServerManager to send and receive database
-        updates, and the NetworkCoordinator gives the ServerManager the information
-        to create the necessary hosts and peer connections.
-    */
+        MeshEndpoint is the main hub for incoming and outgoing P2P packets. It interfaces
+        directly with the SteamNetworking libjingle system, or whichever NAT traversal
+        interface is needed. It contains decision logic for parsing inncoming packets,
+        including sanity checks for various factors (whether the source user exists at all,
+        etc) and reroutes the validated packet to the correct networked object.
 
-    public string shout;
+        Will intelligently respond to various state issues such as an uninitialized network
+        database, missing user data, and missing object data.
+
+        Supports sending of packets through the standard networked object model, or direct
+        to a NAT identifier. (Useful when forcing packets to destinations when the
+        database has not yet been created.)
+    */
+    
     public MeshNetwork meshnet;
 
     List<MeshPacket> failedPackets = new List<MeshPacket>();
@@ -88,8 +92,8 @@ public class MeshEndpoint:MonoBehaviour {
                 return;
             }
         }
-        //if the packet is neither a PlayerJoin or a DatabaseUpdate
 
+        //If the packet is neither a PlayerJoin or a DatabaseUpdate
         Player source = meshnet.database.LookupPlayer(incomingPacket.GetSourcePlayerId()); //retrieve which player sent this packet
         if (source == null) { //hmmm, the NBD can't find the player
             Debug.LogError("Player from which packet originated does not exist on local NDB.");

@@ -8,6 +8,9 @@ public class MeshNetworkIdentity : IReceivesPacket<MeshPacket>, IMeshSerializabl
 
     /// <summary>
     /// 
+    ///     MeshNetworkIdentity.cs
+    ///     Copyright 2017 Finn Sinclair
+    ///     
     ///     MeshNetworkIdentity is a script that allows objects to be 
     ///     synchronized across the mesh network. It receives
     ///     packets from the ServerManager based on its objectID, and routes them
@@ -31,7 +34,7 @@ public class MeshNetworkIdentity : IReceivesPacket<MeshPacket>, IMeshSerializabl
 
     public const int NETWORK_IDENTITY_BYTE_SIZE = 12;
 
-
+    public MeshNetwork meshnetReference;
     ushort objectID;
     ushort prefabID;
     ulong ownerID;

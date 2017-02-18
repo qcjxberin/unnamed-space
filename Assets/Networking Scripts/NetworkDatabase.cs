@@ -8,6 +8,9 @@ using Steamworks;
 public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetworked<MeshNetworkIdentity> {
 
     /*
+        NetworkDatabase.cs
+        Copyright 2017 Finn Sinclair
+
         NetworkDatabase is a collection of information that is a summary of the server-authoritative game state.
         The clever part of this is that the NetworkDatabase is an INetworked object just
         like everything else in the game. This means that only one of this object actually
@@ -17,6 +20,11 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         database, and this is the ID that determines the provider of the real database
         information. Just like a coffee cup has an owner, and that owner has the definitive
         information on that coffee cup, the database also has an owner.
+
+        This does NOT yet support hot-swapping authorized users. Each game session must have
+        one and only one provider, and it must not change throughout the session. TODO: implement
+        code for SteamMatchmaking that terminates the session when the provider leaves. Otherwise,
+        SteamMatchmaking will just set somebody to be the authorized user, which will break everything.
         
         playerList: hashtable between playerID and Player object
         objectList: hashtable between objectID and MeshNetworkIdentity component
@@ -45,6 +53,7 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         thisObjectIdentity = id;
     }
 
+    //Check with MeshNetwork to see if we are the authorized user in this lobby/game/etc
     public bool GetAuthorized() {
         if (meshnet.GetSteamID() == GetIdentity().GetOwnerID()) {
             return true;
@@ -54,6 +63,7 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         }
     }
 
+    //Add a player to the database, and readies the change for sending to peers.
     public void AddPlayer(Player p) {
         Debug.Log("Adding player");
         if (playerList.ContainsKey(p.GetUniqueID())) {
@@ -146,24 +156,28 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     
 
     public Player LookupPlayer(ulong id) {
-        foreach(Player p in playerList.Values) {
-            if (p.GetUniqueID().Equals(id)) {
-                return p;
-            }
+
+        if (playerList.ContainsKey(id)) {
+            return playerList[id]; //Hash table enables very fast lookup
         }
-        return null;
+        else {
+            Debug.LogError("LookupPlayer() cannot find indicated playerID" + id);
+            return null;
+        }
     }
 
     public MeshNetworkIdentity LookupObject(ushort objectID) {
-        if (objectList.ContainsKey(objectID))
-            return objectList[objectID];
-        else
+        if (objectList.ContainsKey(objectID)) {
+            return objectList[objectID]; //Hash table enables very fast lookup
+        }
+        else {
+            Debug.LogError("LookupObject() cannot find indicated playerID" + objectID);
             return null;
-
+        }
     }
 
     public Player[] GetAllPlayers() {
-        Debug.Log("getting all players");
+        
         Player[] output = new Player[playerList.Count];
         playerList.Values.CopyTo(output, 0);
         return output;

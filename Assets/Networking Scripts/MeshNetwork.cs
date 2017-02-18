@@ -7,6 +7,25 @@ using Utilities;
 [RequireComponent(typeof(UIController))]
 [RequireComponent(typeof(GameCoordinator))]
 public class MeshNetwork : MonoBehaviour {
+
+    /// <summary>
+    /// 
+    ///     MeshNetwork.cs
+    ///     Copyright 2017 Finn Sinclair
+    ///     
+    ///     The main manager of all network-related actions. Interfaces with the Steam
+    ///     matchmaking system, for both provider and peer activities. Manages the lobby,
+    ///     manages joining and leaving events (needs work), and has the ability to
+    ///     route packets to the mesh endpoint.
+    ///      
+    ///     Check the #regions for delineated provider and client code. MeshNetwork can
+    ///     do both, but not at once. Right now, MeshNetwork is definitely state-sensitive,
+    ///     and will break if treated incorrectly. More robust implementations and state-insensitive
+    ///     methods are in the works.
+    ///     
+    /// </summary>
+
+
     UIController networkUIController;
     public NetworkDatabase database;
     public GameCoordinator game;

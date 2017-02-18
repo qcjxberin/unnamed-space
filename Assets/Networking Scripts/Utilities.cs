@@ -7,7 +7,21 @@ using System.Collections.Generic;
 using System;
 using Steamworks;
 
+    /*
+        Utilities.cs
+        Copyright 2017 Finn Sinclair
 
+        Assorted helper classes, wrapper classes, data enumerations,
+        and other useful bits and pieces.
+
+        Data serialization and deserialization routines are included
+        in MeshPacket and DatabaseUpdate. More comprehensive summaries
+        of those two classes can be found next to their location in the
+        source.
+
+        The large amount of code at the bottom simply simulates a full
+        database update, to verify that the serialization systems are working.
+    */
 
 namespace Utilities {
 
@@ -71,9 +85,15 @@ namespace Utilities {
         public Action<CSteamID> callback;
     }
 
-    
 
-    
+
+    /*
+        Utilities.Player
+
+        Data structure for player information in the networked object model.
+        Has self-contained serialization and deserialization methods, which
+        use byte arrays for transmission across the network.
+    */
     public class Player {
         private string displayName;
         private ulong uniqueID;
@@ -139,6 +159,16 @@ namespace Utilities {
         
 
     }
+
+    /*
+        Utilities.MeshPacket
+
+        Data structure which contains raw byte data along with metadata
+        concerning the source, destination, and type of contents. This is
+        the main currency of the distributed network object model. Each
+        packet is designed to be self-sufficient, meaning that each packet
+        is unique, identifiable, self-representative, and serializable (both ways).
+    */
 
     public class MeshPacket {
 
@@ -239,7 +269,27 @@ namespace Utilities {
 
     }
 
-    
+
+    /*
+        Utilities.DatabaseUpdate
+
+        Delta updates that drive the distributed network databases. Only the data
+        that is modified is sent. This usually happens one change at a time. However,
+        in some cases, multiple changes can be sent in the same DatabaseUpdate. (This
+        usually occurs when a mass quantity of game state information needs to be sent.)
+
+        The usual sequence of events is as follows:
+
+        - Master database executes update
+        - Master database creates checksum of entire database
+        - Master database compiles DatabaseUpdate containing the necessary
+            (usually just one) change
+        - Master database broadcasts DatabaseUpdate to all peers
+        - Each peer applies the update, generates a checksum of their own local database
+        - If checksums don't match, the peer requests a full (non-delta) update from the master
+    */
+
+
     public class DatabaseUpdate {
 
         //These dictionaries are treated as deltas (why send the entire database?)
@@ -269,6 +319,9 @@ namespace Utilities {
             this.objectDelta = decoded.objectDelta;
         }
 
+
+        //Serialize the update into a bytestream, recursively serializing all
+        //contained objects and players.
         public byte[] GetSerializedBytes() {
             List<byte> output = new List<byte>();
             
@@ -292,6 +345,8 @@ namespace Utilities {
             return output.ToArray();
         }
 
+        //Deserialize incoming byte data and construct a deserialized DatabaseUpdate
+        //Note, this is static
         public static DatabaseUpdate ParseContentAsDatabaseUpdate(byte[] serializedData) {
 
             Dictionary<Player, StateChange> playerList = new Dictionary<Player, StateChange>();
@@ -351,6 +406,10 @@ namespace Utilities {
     }
 
     public class Testing {
+
+        //Runs some checks to make sure that the serialization
+        //systems are running and correctly translating the data.
+        //TODO automate checking
         public static void DebugDatabaseSerialization(MeshNetworkIdentity dummy1, MeshNetworkIdentity dummy2) {
             Debug.Log("Creating player named Mary Jane.");
             Player p1 = new Player("Mary Jananee", 2233443, "abcde");

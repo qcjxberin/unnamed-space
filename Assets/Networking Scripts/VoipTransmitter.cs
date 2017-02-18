@@ -7,19 +7,25 @@ using NAudio;
 using NAudio.Wave.SampleProviders;
 using NAudio.Wave;
 using System.IO;
-public class VoipTransmitter : MonoBehaviour {
+public class VoipTransmitter : MonoBehaviour, IReceivesPacket<MeshPacket>, INetworked<MeshNetworkIdentity> {
 
     /*
         VoipTransmitter.cs
         Copyright 2017 Finn Sinclair
 
+        VoipTransmitter imp
+
         VoipTransmitter is one endpoint of the VOIP system. It collects
         audio data from the microphone, uses NAudio to filter, downsample,
-        and compress the sound information, and then sends an AudioPacket
-        to the ServerManager for broadcast. It is a discrete packet-based
+        and compress the sound information, and then sends a MeshPacket of type
+        PacketType.VOIP. It updat. It is a discrete packet-based
         recording system, collecting segments of audio data on a regular
         time interval. The audio is collected in 32-bit float, and converted
-        to 8-bit PCM data. VoipTransmitter is not network-aware, meaning
+        to 8-bit PCM data. The data is downsampled, run through a high-pass
+        filter (using the correct Nyquist frequency) and then compressed using
+        mu-law voice compression.
+        
+        VoipTransmitter is not network-aware, meaning
         that if all the right variables are set, it WILL send packets to
         the ServerManager, whether or not the ServerManager is actually
         connected to anyone or is ready to transmit.
@@ -30,7 +36,7 @@ public class VoipTransmitter : MonoBehaviour {
     */
 
 
-
+    MeshNetworkIdentity thisObjectIdentity;
 
     //Too high or too low WILL cause issues.
     //ACM stream buffer can easily overflow, only performing one ACM pass.
@@ -97,6 +103,10 @@ public class VoipTransmitter : MonoBehaviour {
     }
 
     // Update is called once per frame
+
+    public MeshNetworkIdentity GetIdentity() {
+        return thisObjectIdentity;
+    }
     void Update() {
 
         if (Time.time - lastSampleTime > interval && isTransmitting) {
@@ -194,6 +204,11 @@ public class VoipTransmitter : MonoBehaviour {
                 Debug.Log("Sending " + compressedData.Count + " bytes");
                 debugReceiver.ReceivePacket(new MeshPacket(compressedData.ToArray(), PacketType.VOIP, 0, 0, 0, 0));
             }
+
+
+            //TODO implement packet sending from VoipTransmitter
+            //need to work on authorization checks, and where to put them
+            //MeshPacket p = new MeshPacket(compressedData.ToArray(), PacketType.VOIP, GetIdentity().meshnetReference.)
             
         }
     }

@@ -7,6 +7,16 @@ using Utilities;
 [RequireComponent(typeof(MeshNetwork))]
 public class GameCoordinator : MonoBehaviour {
 
+    /// <summary>
+    ///     
+    ///     GameCoordinator.cs
+    ///     Copyright 2017 Finn Sinclair
+    ///     
+    ///     High-level coordinator for game status. Creates and destroys actual
+    ///     gameobjects.
+    /// 
+    /// </summary>
+
     public MeshNetwork meshnet;
 
     //Network Prefab Registry
@@ -40,7 +50,13 @@ public class GameCoordinator : MonoBehaviour {
     //Intended functionality is that this method is called by the the procedure
     //that has already registered this MeshNetworkIdentity on the database.
     public GameObject SpawnObject(MeshNetworkIdentity i) {
-        
+
+        if(meshnet == null) {
+            Debug.LogError("Trying to spawn object when underlying mesh network not intialized.");
+            return null;
+        }
+
+        i.meshnetReference = meshnet; //set a reference to the mesh network
         if (networkPrefabs.ContainsKey(i.GetPrefabID()) == false) {
             Debug.LogError("NetworkPrefab registry error: Requested prefab ID does not exist.");
             return null;
