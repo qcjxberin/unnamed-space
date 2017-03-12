@@ -4,7 +4,7 @@ using UnityEngine;
 using System;
 using Utilities;
 
-public class VoipReceiver : MonoBehaviour, IReceivesPacket<MeshPacket> {
+public class VoipReceiver : MonoBehaviour, IReceivesPacket<MeshPacket>, INetworked<MeshNetworkIdentity> {
 
     /*
         VoipReceiver.cs
@@ -32,6 +32,8 @@ public class VoipReceiver : MonoBehaviour, IReceivesPacket<MeshPacket> {
 
     */
 
+    public MeshNetworkIdentity thisObjectIdentity;
+
     public float volume;
 
     int TRANSMIT_FREQUENCY = 12000;
@@ -45,6 +47,12 @@ public class VoipReceiver : MonoBehaviour, IReceivesPacket<MeshPacket> {
     AudioSource audioSource;
     int writtenSamples = 0;
 
+    public void SetIdentity(MeshNetworkIdentity i) {
+        thisObjectIdentity = i;
+    }
+    public MeshNetworkIdentity GetIdentity() {
+        return thisObjectIdentity;
+    }
 
     void Start() {
         audioSource = gameObject.GetComponent<AudioSource>();
@@ -90,8 +98,6 @@ public class VoipReceiver : MonoBehaviour, IReceivesPacket<MeshPacket> {
     }
 
     public void ReceivePacket(MeshPacket p) { //called, containing incoming packet
-
-
         
         if(p.GetPacketType() != PacketType.VOIP) {
             Debug.LogError("PACKET TYPE MISMATCH");

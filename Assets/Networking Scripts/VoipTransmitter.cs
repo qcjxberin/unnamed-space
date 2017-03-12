@@ -36,7 +36,7 @@ public class VoipTransmitter : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     */
 
 
-    MeshNetworkIdentity thisObjectIdentity;
+    public MeshNetworkIdentity thisObjectIdentity;
 
     //Too high or too low WILL cause issues.
     //ACM stream buffer can easily overflow, only performing one ACM pass.
@@ -87,6 +87,13 @@ public class VoipTransmitter : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     NAudio.Codecs.G722Codec g722;
 
 
+    public void SetIdentity(MeshNetworkIdentity id) {
+        thisObjectIdentity = id;
+    }
+    public MeshNetworkIdentity GetIdentity() {
+        return thisObjectIdentity;
+    }
+
     void Start() {
         
         
@@ -104,9 +111,12 @@ public class VoipTransmitter : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
 
     // Update is called once per frame
 
-    public MeshNetworkIdentity GetIdentity() {
-        return thisObjectIdentity;
+    
+
+    public void ReceivePacket(MeshPacket p) {
+        Debug.Log("Transmitter is recieving packet, is this intended?");
     }
+
     void Update() {
 
         if (Time.time - lastSampleTime > interval && isTransmitting) {
