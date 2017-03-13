@@ -64,6 +64,27 @@ public class MeshNetworkIdentity : IReceivesPacket<MeshPacket>, IMeshSerializabl
         }
     }
 
+    public void RoutePacket(MeshPacket p) {
+        if(meshnetReference == null) {
+            Debug.LogError("Identity trying to route packet without meshnet reference");
+            return;
+        }
+        meshnetReference.RoutePacket(p);
+    }
+
+    public bool IsLocallyOwned() {
+        if (meshnetReference == null) {
+            Debug.LogError("Meshnet reference missing");
+            return false;
+        }
+        if (meshnetReference.GetSteamID() == GetOwnerID()) {
+            return true;
+        }else {
+            return false;
+        }
+    }
+
+
     public byte[] GetSerializedBytes() {
         List<byte> output = new List<byte>();
         output.AddRange(BitConverter.GetBytes(objectID));
@@ -98,5 +119,9 @@ public class MeshNetworkIdentity : IReceivesPacket<MeshPacket>, IMeshSerializabl
     }
     public void SetOwnerID(ulong id) {
         ownerID = id;
+    }
+
+    public void SetMeshnetReference(MeshNetwork net) {
+        meshnetReference = net;
     }
 }

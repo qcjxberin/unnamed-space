@@ -135,9 +135,8 @@ public class MeshNetwork : MonoBehaviour {
         MeshNetworkIdentity databaseID = new MeshNetworkIdentity((ushort)ReservedObjectIDs.DatabaseObject, 
             (ushort)ReservedPrefabIDs.Database, 
             (ulong)GetSteamID());
-
+        
         database = game.SpawnObject(databaseID).GetComponent<NetworkDatabase>(); //Spawns the database prefab.
-        database.meshnet = this;
         Debug.Log("Registering database.");
         database.AddObject(databaseID); //Tells the database that it itself exists (funny)
         
@@ -153,6 +152,7 @@ public class MeshNetwork : MonoBehaviour {
     public void OnCreateLobby(LobbyCreated_t pCallback, bool bIOFailure) {
         if(pCallback.m_eResult != EResult.k_EResultOK) {
             Debug.LogError("Lobby creation didn't work.");
+            Debug.LogError(pCallback.m_eResult);
             return;
         }
         Debug.Log("Successfully created lobby.");
@@ -183,6 +183,7 @@ public class MeshNetwork : MonoBehaviour {
             return;
         }
         //First, we need the UI to show the player the available lobbies.
+        Debug.Log("Requesting lobbies...");
         m_GotLobbyList.Set(SteamMatchmaking.RequestLobbyList());
         
     }
@@ -284,8 +285,6 @@ public class MeshNetwork : MonoBehaviour {
             Debug.LogError("Database intialization failed.");
             return;
         }
-        database.AddObject(databaseID); //Tells the database that it itself exists (funny)
-
         database.ReceivePacket(p);
 
     }

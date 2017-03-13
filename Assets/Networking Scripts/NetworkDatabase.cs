@@ -32,7 +32,6 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     */
 
     public bool UseFullUpdates = false; //Should the network database send the entire database every time something changes?
-    public MeshNetwork meshnet; //MeshNetwork object. Set when MeshNetwork starts up
     public MeshNetworkIdentity thisObjectIdentity; //Required for INetworked
     UnityEngine.UI.Text debugText;
 
@@ -54,7 +53,7 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         thisObjectIdentity = id;
     }
 
-    //If a DatabaseDebugView is present, register it
+    //Hunt down some relevant gameobjects to keep track of
     public void OnEnable() {
         GameObject debug = GameObject.FindGameObjectWithTag("DatabaseDebug");
         if(debug != null) {
@@ -70,6 +69,18 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         else {
             Debug.Log("Couldn't find debug text.");
         }
+        GameObject mn = GameObject.FindGameObjectWithTag("DatabaseDebug");
+        if (debug != null) {
+            UnityEngine.UI.Text t = debug.GetComponent<UnityEngine.UI.Text>();
+            if (t != null) {
+                debugText = t;
+                Debug.Log("Succesfully set debug text");
+            } else {
+                Debug.Log("Couldn't find text component");
+            }
+        } else {
+            Debug.Log("Couldn't find debug text.");
+        }
     }
 
     //If we have debug readout, update the readout
@@ -79,11 +90,12 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
             s += "Players: ";
             foreach(Player p in playerList.Values) {
                 s += p.GetNameSanitized() + ":" + p.GetUniqueID();
-                s += ", ";
+                s += "\n";
             }
-            s += "\n\nObjects: ";
+            s += "\nObjects: ";
             foreach (MeshNetworkIdentity i in objectList.Values) {
                 s += i.GetPrefabID() + ":" + i.GetOwnerID();
+                s += "\n";
             }
             debugText.text = s;
         }
@@ -91,12 +103,7 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
 
     //Check with MeshNetwork to see if we are the authorized user in this lobby/game/etc
     public bool GetAuthorized() {
-        if (meshnet.GetSteamID() == GetIdentity().GetOwnerID()) {
-            return true;
-        }
-        else {
-            return false;
-        }
+        return GetIdentity().IsLocallyOwned();
     }
 
 
@@ -235,17 +242,23 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         SendDelta(playerListDelta, objectListDelta);
     }
 
-    public static ushort GenerateDatabaseChecksum(Dictionary<ulong, Player> playerList,
-        Dictionary<ushort, MeshNetworkIdentity> objectList) {
+
+    //TODO IMPLEMENT BINARY XOR CHECKSUM
+    public static ushort GenerateDatabaseChecksum(Dictionary<ulong, Player> players,
+        Dictionary<ushort, MeshNetworkIdentity> objects) {
+
+
 
         //Always use zero for the hash when we create this dummy container.
         //Otherwise we'd be hashing a hash!
         Dictionary<Player, StateChange> fakePlayerDelta = new Dictionary<Player, StateChange>();
-        foreach(Player p in playerList.Values) {
+        foreach(Player p in players.Values) {
             fakePlayerDelta.Add(p, StateChange.Change);
         }
+        
+
         Dictionary<MeshNetworkIdentity, StateChange> fakeObjectDelta = new Dictionary<MeshNetworkIdentity, StateChange>();
-        foreach(MeshNetworkIdentity m in objectList.Values) {
+        foreach(MeshNetworkIdentity m in objects.Values) {
             fakeObjectDelta.Add(m, StateChange.Change);
         }
         DatabaseUpdate container = new DatabaseUpdate(fakePlayerDelta, fakeObjectDelta, 0);
@@ -259,6 +272,13 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     }
 
     private void SendDelta(Dictionary<Player, StateChange> playerUpdate, Dictionary<MeshNetworkIdentity, StateChange> objectUpdate) {
+        if(objectList.ContainsValue(GetIdentity()) == false ||
+            playerList.ContainsKey(GetIdentity().GetOwnerID()) == false){
+            Debug.Log("Trying to send delta when database is not yet fully set up. Skipping");
+            return;
+        }
+
+
         MeshPacket p = new MeshPacket();
         p.SetPacketType(PacketType.DatabaseUpdate);
         p.qos = EP2PSend.k_EP2PSendReliable;
@@ -266,11 +286,34 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         p.SetSourceObjectId((ushort)ReservedObjectIDs.DatabaseObject);
         p.SetTargetPlayerId((byte)ReservedPlayerIDs.Broadcast);
         p.SetTargetObjectId((ushort)ReservedObjectIDs.DatabaseObject);
-
+        
+        //Check if the database is included in the delta
+        bool flag = false;
+        foreach(MeshNetworkIdentity i in objectUpdate.Keys) {
+            if(i.GetPrefabID() == GetIdentity().GetPrefabID()) {
+                flag = true;
+            }
+        }
+        //If not, add database to delta. (The database should always be included.)
+        if (flag == false) {
+            objectUpdate[GetIdentity()] = StateChange.Addition;
+        }
+        //Check if the owner is included in the delta
+        flag = false;
+        foreach (Player pl in playerUpdate.Keys) {
+            if (pl.GetUniqueID() == GetIdentity().GetOwnerID()) {
+                flag = true;
+            }
+        }
+        //If not, add owner to delta. (The owner should always be included.)
+        if (flag == false) {
+            
+            playerUpdate[playerList[GetIdentity().GetOwnerID()]] = StateChange.Addition;
+        }
         ushort hash = GenerateDatabaseChecksum(playerList, objectList);
         DatabaseUpdate update = new DatabaseUpdate(playerUpdate, objectUpdate, hash);
         p.SetContents(update.GetSerializedBytes());
-        meshnet.RoutePacket(p);
+        GetIdentity().RoutePacket(p);
     }
 
     public void ReceivePacket(MeshPacket p) {
@@ -279,34 +322,67 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
                 ReceiveUpdate(DatabaseUpdate.ParseContentAsDatabaseUpdate(p.GetContents()));
             }
         }
-        else {
+        else if(p.GetPacketType() == PacketType.FullUpdateRequest){
 
         }
 
     }
+    
+    public void SendFullUpdate() {
+        Debug.Log("Sending full update.");
+        Dictionary<Player, StateChange> playerUpdate = new Dictionary<Player, StateChange>();
+        Dictionary<MeshNetworkIdentity, StateChange> objectUpdate = new Dictionary<MeshNetworkIdentity, StateChange>();
+
+        foreach(Player p in playerList.Values) {
+            playerUpdate[p] = StateChange.Addition;
+        }
+        foreach(MeshNetworkIdentity i in objectList.Values) {
+            objectUpdate[i] = StateChange.Addition;
+        }
+        SendDelta(playerUpdate, objectUpdate); //This should contain the database, so the delta algorithm shouldn't add it in
+    }
+
     
     //This is called when the authorized database sends an update to this database.
     //If this object is the authorized database, this should never be called.
     public void ReceiveUpdate(DatabaseUpdate dbup) {
         foreach(Player p in dbup.playerDelta.Keys) {
             if(dbup.playerDelta[p] == StateChange.Addition) {
-                AddPlayer(p);
+                playerList.Add(p.GetUniqueID(), p);
             }else if(dbup.playerDelta[p] == StateChange.Removal) {
-                RemovePlayer(p);
-            }else if(dbup.playerDelta[p] == StateChange.Change) {
-                ChangePlayer(p);
+                playerList.Remove(p.GetUniqueID());
+            } else if(dbup.playerDelta[p] == StateChange.Change) {
+                playerList[p.GetUniqueID()] = p;
             }
         }
         foreach (MeshNetworkIdentity i in dbup.objectDelta.Keys) {
             if (dbup.objectDelta[i] == StateChange.Addition) {
-                AddObject(i);
+                objectList.Add(i.GetObjectID(), i);
             }
             else if (dbup.objectDelta[i] == StateChange.Removal) {
-                RemoveObject(i);
+                objectList.Remove(i.GetObjectID());
             }
             else if (dbup.objectDelta[i] == StateChange.Change) {
-                ChangeObject(i);
+                objectList[i.GetObjectID()] = i;
             }
+        }
+
+        ushort check = GenerateDatabaseChecksum(playerList, objectList);
+        if(check != dbup.fullHash) {
+            Debug.Log("Database checksum doesn't match: " + check + " vs " + dbup.fullHash + ". Requesting full update.");
+            MeshPacket p = new MeshPacket(new byte[0], PacketType.FullUpdateRequest,
+                GetIdentity().meshnetReference.GetSteamID(),
+                GetIdentity().GetOwnerID(),
+                GetIdentity().GetObjectID(),
+                GetIdentity().GetObjectID());
+            GetIdentity().RoutePacket(p);
+        }
+    }
+
+    public string RenderAsString() {
+        string s;
+        foreach(Player p in playerList.Values) {
+
         }
     }
     

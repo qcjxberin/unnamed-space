@@ -56,7 +56,7 @@ public class GameCoordinator : MonoBehaviour {
             return null;
         }
 
-        i.meshnetReference = meshnet; //set a reference to the mesh network
+        i.SetMeshnetReference(meshnet); //set a reference to the mesh network
         if (networkPrefabs.ContainsKey(i.GetPrefabID()) == false) {
             Debug.LogError("NetworkPrefab registry error: Requested prefab ID does not exist.");
             return null;

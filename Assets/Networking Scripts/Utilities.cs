@@ -60,8 +60,10 @@ namespace Utilities {
         Ping = 7,
         Generic = 0,
         VOIP = 20,
+        FullUpdateRequest = 9,
         DatabaseUpdate = 10,
-        PlayerJoin = 11
+        PlayerJoin = 11,
+        
     }
 
     public enum ConnectionStatus {
