@@ -34,6 +34,7 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     public bool UseFullUpdates = false; //Should the network database send the entire database every time something changes?
     public MeshNetwork meshnet; //MeshNetwork object. Set when MeshNetwork starts up
     public MeshNetworkIdentity thisObjectIdentity; //Required for INetworked
+    UnityEngine.UI.Text debugText;
 
     //Serialized below here.
     private Dictionary<ulong, Player> playerList = new Dictionary<ulong, Player>();
@@ -53,6 +54,41 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         thisObjectIdentity = id;
     }
 
+    //If a DatabaseDebugView is present, register it
+    public void OnEnable() {
+        GameObject debug = GameObject.FindGameObjectWithTag("DatabaseDebug");
+        if(debug != null) {
+            UnityEngine.UI.Text t = debug.GetComponent<UnityEngine.UI.Text>();
+            if(t != null) {
+                debugText = t;
+                Debug.Log("Succesfully set debug text");
+            }
+            else {
+                Debug.Log("Couldn't find text component");
+            }
+        }
+        else {
+            Debug.Log("Couldn't find debug text.");
+        }
+    }
+
+    //If we have debug readout, update the readout
+    public void Update() {
+        if(debugText != null) {
+            string s = "";
+            s += "Players: ";
+            foreach(Player p in playerList.Values) {
+                s += p.GetNameSanitized() + ":" + p.GetUniqueID();
+                s += ", ";
+            }
+            s += "\n\nObjects: ";
+            foreach (MeshNetworkIdentity i in objectList.Values) {
+                s += i.GetPrefabID() + ":" + i.GetOwnerID();
+            }
+            debugText.text = s;
+        }
+    }
+
     //Check with MeshNetwork to see if we are the authorized user in this lobby/game/etc
     public bool GetAuthorized() {
         if (meshnet.GetSteamID() == GetIdentity().GetOwnerID()) {
@@ -62,6 +98,8 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
             return false;
         }
     }
+
+
 
     //Add a player to the database, and readies the change for sending to peers.
     public void AddPlayer(Player p) {

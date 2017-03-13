@@ -49,7 +49,7 @@ public class MeshEndpoint : MonoBehaviour {
 
         uint bufferLength = 0;
         if (SteamNetworking.IsP2PPacketAvailable(out bufferLength)) {
-            Debug.Log("Receiving Packet");
+            Debug.Log("Receiving Packet, " + bufferLength + " bytes long");
             byte[] destBuffer = new byte[bufferLength];
             UInt32 bytesRead = 0;
             CSteamID remoteID;
@@ -71,6 +71,7 @@ public class MeshEndpoint : MonoBehaviour {
 
 
         if(incomingPacket.GetPacketType() == PacketType.PlayerJoin) {
+            Debug.Log("PlayerJoin packet identified");
             if(meshnet.database == null) {
                 Debug.LogError("Database not intialized yet!");
                 return;
@@ -81,7 +82,7 @@ public class MeshEndpoint : MonoBehaviour {
             }
             CSteamID sID = new CSteamID(incomingPacket.GetSourcePlayerId());
             Player p = meshnet.ConstructPlayer(sID);
-            meshnet.database.AddPlayer(new Player());
+            meshnet.database.AddPlayer(p);
             return;
 
         }else if(incomingPacket.GetPacketType() == PacketType.DatabaseUpdate) {

@@ -97,6 +97,7 @@ public class MeshNetwork : MonoBehaviour {
             return null;
         }
         p.SetName(name);
+        Debug.Log("Constructing player with name " + name);
         p.SetUniqueID(id.m_SteamID);
         p.SetPrivateKey("key");
         return p;
@@ -260,12 +261,14 @@ public class MeshNetwork : MonoBehaviour {
 
     public void InitializeDatabaseClientside(MeshPacket p) {
 
-        if(database.Equals(CSteamID.Nil) == false) {
+        if(database != null) {
             Debug.LogError("Database already exists. InitializeDatabaseClientside prohibited.");
             return;
         }
 
         DatabaseUpdate u = DatabaseUpdate.ParseContentAsDatabaseUpdate(p.GetContents());
+        Debug.Log("Number of incoming players: " + u.playerDelta.Count);
+        Debug.Log("Number of incoming objects: " + u.objectDelta.Count);
         //Here, we construct the database shadow using the database update.
         bool flagHasFoundDatabase = false;
         MeshNetworkIdentity databaseID = null;
