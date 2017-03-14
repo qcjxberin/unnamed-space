@@ -89,6 +89,26 @@ namespace Utilities {
         public Action<CSteamID> callback;
     }
 
+    public struct IDAssignmentResult {
+        public bool success;
+        public ushort id;
+
+        public IDAssignmentResult(bool s, ushort i) {
+            success = s;
+            id = i;
+        }
+    }
+
+    public struct DatabaseChangeResult {
+        public bool success;
+        public string error;
+
+        public DatabaseChangeResult(bool s, string e) {
+            success = s;
+            error = e;
+        }
+    }
+
 
 
     /*

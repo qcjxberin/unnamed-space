@@ -31,6 +31,9 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
 
     */
 
+    public const ushort OBJECT_ID_MIN = 10;
+    public const ushort OBJECT_ID_MAX = 65500;
+
     public bool UseFullUpdates = false; //Should the network database send the entire database every time something changes?
     public MeshNetworkIdentity thisObjectIdentity; //Required for INetworked
     UnityEngine.UI.Text debugText;
@@ -105,128 +108,162 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
     public bool GetAuthorized() {
         return GetIdentity().IsLocallyOwned();
     }
-
-
-
-    //Add a player to the database, and readies the change for sending to peers.
-    public void AddPlayer(Player p) {
+    
+    //Player modification methods
+    public DatabaseChangeResult AddPlayer(Player p) {
         if (!GetAuthorized()) {
             Debug.LogError("Database change not authorized.");
-            return;
+            return new DatabaseChangeResult(false, "Not authorized");
         }
             
         Debug.Log("Adding player");
         if (playerList.ContainsKey(p.GetUniqueID())) {
             Debug.LogError("User already exists!");
-            return;
+            return new DatabaseChangeResult(false, "Player already exists");
         }
         if (p.GetUniqueID() == GetIdentity().GetOwnerID() && p.GetUniqueID() != (ulong)ReservedPlayerIDs.Unspecified) {
             if (!GetAuthorized()) {
                 Debug.Log("Unauthorized user trying to override provider.");
+                return new DatabaseChangeResult(false, "Unauthorized agent overriding provider");
             }
 
         }
-        ulong uniqueID = p.GetUniqueID();
-        playerList.Add(uniqueID, p);
+        playerList.Add(p.GetUniqueID(), p);
         if (GetAuthorized()) {
             Debug.Log("Sending player update");
             SendPlayerUpdate(p, StateChange.Addition);
+            return new DatabaseChangeResult(true, "");
         }
+        return new DatabaseChangeResult(false, "Unknown error");
     }
-
-    public void RemovePlayer(Player p) {
+    public DatabaseChangeResult RemovePlayer(Player p) {
         if (!GetAuthorized()) {
             Debug.LogError("Database change not authorized.");
-            return;
+            return new DatabaseChangeResult(false, "Not authorized");
         }
         if (playerList.ContainsKey(p.GetUniqueID()) == false) {
             Debug.LogError("User that was requested to be removed does not exist!");
-            return;
+            return new DatabaseChangeResult(false, "Player does not exist");
         }
         if (p.GetUniqueID() == GetIdentity().GetOwnerID() && p.GetUniqueID() != (ulong)ReservedPlayerIDs.Unspecified) {
             Debug.LogError("Trying to delete provider. This definitely isn't supposed to happen.");
-            return;
+            return new DatabaseChangeResult(false, "Can't delete provider");
         }
         playerList.Remove(p.GetUniqueID());
         if (GetAuthorized()) {
             SendPlayerUpdate(p, StateChange.Removal);
+            return new DatabaseChangeResult(true, "");
         }
+        return new DatabaseChangeResult(false, "Unknown error");
     }
-
-    public void ChangePlayer(Player p) {
+    public DatabaseChangeResult ChangePlayer(Player p) {
         if (!GetAuthorized()) {
             Debug.LogError("Database change not authorized.");
-            return;
+            return new DatabaseChangeResult(false, "Not authorized");
         }
         if (playerList.ContainsKey(p.GetUniqueID()) == false) {
             Debug.LogError("Trying to modify player object that doesn't exist here!");
-            return;
+            return new DatabaseChangeResult(false, "Player doesn't exist");
         }
         if (p.GetUniqueID() == GetIdentity().GetOwnerID() && p.GetUniqueID() != (ulong)ReservedPlayerIDs.Unspecified) {
             Debug.LogError("Trying to modify provider. This isn't supposed to happen.");
-            return;
+            return new DatabaseChangeResult(false, "Can't modify provider");
         }
         playerList[p.GetUniqueID()] = p;
         if (GetAuthorized()) {
             SendPlayerUpdate(p, StateChange.Change);
-        } 
+            return new DatabaseChangeResult(true, "");
+        }
+        return new DatabaseChangeResult(false, "Unknown error");
     }
 
-    public void AddObject(MeshNetworkIdentity i) {
+    //Object modification methods
+    public DatabaseChangeResult AddObject(MeshNetworkIdentity i) {
         if (!GetAuthorized()) {
             Debug.LogError("Database change not authorized.");
-            return;
+            return new DatabaseChangeResult(false, "Database change not authorized");
         }
         if (objectList.ContainsKey(i.GetObjectID())) {
             Debug.LogError("Object already exists!");
-            return;
+            return new DatabaseChangeResult(false, "Object already exists");
         }
         if(i.GetObjectID() == (ushort)ReservedObjectIDs.DatabaseObject) {
-            Debug.Log("Creating database object. This should only happen once!");
+            Debug.Log("Warning: creating database object. This should only happen once!");
+        }
+
+        if(i.GetObjectID() != (ushort)ReservedObjectIDs.DatabaseObject) {
+            IDAssignmentResult idresult = GetAvailableObjectID(); //Look for an available object id
+            if (idresult.success) {
+                i.SetObjectID(idresult.id);
+            }else {
+                return new DatabaseChangeResult(false, "No object id available for use. Too many objects?");
+            }
         }
         objectList.Add(i.GetObjectID(), i);
         if (GetAuthorized()) {
             SendObjectUpdate(i, StateChange.Addition);
+            return new DatabaseChangeResult(true, "");
         }
+        return new DatabaseChangeResult(false, "Unknown error");
     }
-    public void RemoveObject(MeshNetworkIdentity i) {
+    public DatabaseChangeResult RemoveObject(MeshNetworkIdentity i) {
         if (!GetAuthorized()) {
             Debug.LogError("Database change not authorized.");
-            return;
+            return new DatabaseChangeResult(false, "Not authorized");
         }
         if (objectList.ContainsKey(i.GetObjectID()) == false) {
-            Debug.LogError("Object that was requested to be removed does not exist!");
+            return new DatabaseChangeResult(false, "Object does not exist");
         }
         if(i.GetObjectID() == (ushort)ReservedObjectIDs.DatabaseObject) {
             Debug.LogError("Tried to remove database. Bad idea.");
-            return;
+            return new DatabaseChangeResult(false, "Can't remove database.");
         }
         objectList.Remove(i.GetObjectID());
         if (GetAuthorized()) {
             SendObjectUpdate(i, StateChange.Removal);
+            return new DatabaseChangeResult(true, "");
         }
+        return new DatabaseChangeResult(false, "Unknown error");
     }
-    public void ChangeObject(MeshNetworkIdentity i) {
+    public DatabaseChangeResult ChangeObject(MeshNetworkIdentity i) {
         if (!GetAuthorized()) {
             Debug.LogError("Database change not authorized.");
-            return;
+            return new DatabaseChangeResult(false, "Not authorized");
         }
         if (objectList.ContainsKey(i.GetObjectID()) == false) {
             Debug.LogError("Object that was requested to be changed does not exist!");
+            return new DatabaseChangeResult(false, "Object does not exist");
         }
         if (i.GetObjectID() == (ushort)ReservedObjectIDs.DatabaseObject) {
             Debug.LogError("Tried to change database. This action is prohibited."); //maybe not in the future...
-            return;
+            return new DatabaseChangeResult(false, "Can't change database");
         }
         objectList[i.GetObjectID()] = i;
         if (GetAuthorized()) {
             SendObjectUpdate(i, StateChange.Change);
+            return new DatabaseChangeResult(true, "");
         }
+        return new DatabaseChangeResult(false, "Unknown error");
+    }
+
+    //Checks if there is an object ID available for use, and returns it if there is one
+    public IDAssignmentResult GetAvailableObjectID() {
+        for(ushort u = OBJECT_ID_MIN; u <= OBJECT_ID_MAX; u++) {
+            if(LookupObject(u) == null) {
+                IDAssignmentResult positiveResult;
+                positiveResult.id = u;
+                positiveResult.success = true;
+                return positiveResult;
+            }
+        }
+        IDAssignmentResult result;
+        result.id = (ushort)ReservedObjectIDs.Unspecified;
+        result.success = false;
+        return result;
     }
     
-
+    //Lookup a player in an error-safe way
     public Player LookupPlayer(ulong id) {
-
         if (playerList.ContainsKey(id)) {
             return playerList[id]; //Hash table enables very fast lookup
         }
@@ -236,6 +273,7 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         }
     }
 
+    //Lookup an object in an error-safe way
     public MeshNetworkIdentity LookupObject(ushort objectID) {
         if (objectList.ContainsKey(objectID)) {
             return objectList[objectID]; //Hash table enables very fast lookup
@@ -246,6 +284,7 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         }
     }
 
+    //Retrieve array of all players on database
     public Player[] GetAllPlayers() {
         
         Player[] output = new Player[playerList.Count];
@@ -254,12 +293,15 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
         
     }
     
+    //Send delta containing a player
     private void SendPlayerUpdate(Player p, StateChange s) {
         Dictionary<Player, StateChange> playerListDelta = new Dictionary<Player, StateChange>();
         Dictionary<MeshNetworkIdentity, StateChange> objectListDelta = new Dictionary<MeshNetworkIdentity, StateChange>();
         playerListDelta.Add(p, s);
         SendDelta(playerListDelta, objectListDelta, (ulong)ReservedPlayerIDs.Broadcast);
     }
+    
+    //Send delta containing an object
     private void SendObjectUpdate(MeshNetworkIdentity id, StateChange s) {
         Dictionary<Player, StateChange> playerListDelta = new Dictionary<Player, StateChange>();
         Dictionary<MeshNetworkIdentity, StateChange> objectListDelta = new Dictionary<MeshNetworkIdentity, StateChange>();
@@ -269,7 +311,8 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
 
     
     
-
+    //Generates order-agnostic commutative checksum of given players and objects
+    //Can generate checksums of individual objects if needed
     public static ushort GenerateDatabaseChecksum(Dictionary<ulong, Player> players,
         Dictionary<ushort, MeshNetworkIdentity> objects) {
 
@@ -309,6 +352,9 @@ public class NetworkDatabase : MonoBehaviour, IReceivesPacket<MeshPacket>, INetw
 
     }
 
+    //Send delta update containing given player and object delta information
+    //Formats packet to be sent to specified target ID (use ReservedPlayerIDs.Broadcast if necessary)
+    //Will always include the database object and the database owner, even if not specified
     private void SendDelta(Dictionary<Player, StateChange> playerUpdate, Dictionary<MeshNetworkIdentity, StateChange> objectUpdate, ulong targetPlayerID) {
         if(objectList.ContainsValue(GetIdentity()) == false ||
             playerList.ContainsKey(GetIdentity().GetOwnerID()) == false){

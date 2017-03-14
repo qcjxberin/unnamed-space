@@ -47,8 +47,6 @@ public class GameCoordinator : MonoBehaviour {
     }
 
     //This simply instantiates a network prefab. It does not update the database.
-    //Intended functionality is that this method is called by the the procedure
-    //that has already registered this MeshNetworkIdentity on the database.
     public GameObject SpawnObject(MeshNetworkIdentity i) {
 
         if(meshnet == null) {
