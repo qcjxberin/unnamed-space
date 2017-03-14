@@ -38,6 +38,7 @@ public class MeshNetwork : MonoBehaviour {
     CallResult<LobbyEnter_t> m_JoinedLobby;
     CallResult<LobbyMatchList_t> m_GotLobbyList;
     Callback<P2PSessionRequest_t> m_NewUserSession;
+    Callback<LobbyChatUpdate_t> m_ChatUpdate;
     void Start() {
 
         DontDestroyOnLoad(gameObject);
@@ -55,6 +56,7 @@ public class MeshNetwork : MonoBehaviour {
             m_JoinedLobby = CallResult<LobbyEnter_t>.Create(OnJoinedLobby);
             m_GotLobbyList = CallResult<LobbyMatchList_t>.Create(OnGotLobbyList);
             m_NewUserSession = Callback<P2PSessionRequest_t>.Create(OnSessionRequest);
+            m_ChatUpdate = Callback<LobbyChatUpdate_t>.Create(OnLobbyUpdate);
         }
         else {
             Debug.LogError("SteamManager not initialized!");
@@ -171,6 +173,14 @@ public class MeshNetwork : MonoBehaviour {
         SteamMatchmaking.SetLobbyType(lobby, ELobbyType.k_ELobbyTypePublic);
         
         game.EnterGame(lobby);
+    }
+
+    public void OnLobbyUpdate(LobbyChatUpdate_t pCallback) {
+        if(pCallback.m_rgfChatMemberStateChange == (uint)EChatMemberStateChange.k_EChatMemberStateChangeDisconnected) {
+            Debug.Log("Player disconnected");
+        }else if(pCallback.m_rgfChatMemberStateChange == (uint)EChatMemberStateChange.k_EChatMemberStateChangeLeft) {
+            Debug.Log("Player left");
+        }
     }
 
     #endregion

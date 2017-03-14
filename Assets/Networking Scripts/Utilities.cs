@@ -63,6 +63,7 @@ namespace Utilities {
         FullUpdateRequest = 9,
         DatabaseUpdate = 10,
         PlayerJoin = 11,
+        DatabaseChangeRequest = 12
         
     }
 
@@ -73,7 +74,8 @@ namespace Utilities {
     public enum StateChange:byte {
         Addition = 0,
         Removal = 1,
-        Change = 2
+        Change = 2,
+        Override = 3
     }
 
     public struct GamePublishingInfo {
